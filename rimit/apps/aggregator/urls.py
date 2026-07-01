@@ -5,7 +5,7 @@ from apps.aggregator.views import (
     UniversityViewSet, CourseViewSet, FeeStructureViewSet, UniversityDocVaultViewSet,
 )
 
-router = DefaultRouter()
+router = DefaultRouter(trailing_slash=False)
 router.register('universities', UniversityViewSet, basename='university')
 router.register('courses', CourseViewSet, basename='course')
 router.register('fees', FeeStructureViewSet, basename='fee')

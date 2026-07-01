@@ -3,7 +3,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from apps.notifications.views import NotificationLogViewSet, BroadcastView
 
-router = DefaultRouter()
+router = DefaultRouter(trailing_slash=False)
 router.register('notifications/logs', NotificationLogViewSet, basename='notification-log')
 
 urlpatterns = [

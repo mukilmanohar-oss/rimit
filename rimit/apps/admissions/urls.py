@@ -5,7 +5,7 @@ from apps.admissions.views import (
     StudentViewSet, StudentAcademicHistoryViewSet, StudentDocViewSet, EnrollmentViewSet,
 )
 
-router = DefaultRouter()
+router = DefaultRouter(trailing_slash=False)
 router.register('students', StudentViewSet, basename='student')
 router.register('academic-histories', StudentAcademicHistoryViewSet, basename='academic-history')
 router.register('students-docs', StudentDocViewSet, basename='student-doc')

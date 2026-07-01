@@ -5,7 +5,7 @@ from apps.rules.views import (
     IntakeSessionViewSet, RulesConfigurationViewSet, EnrollmentValidationView,
 )
 
-router = DefaultRouter()
+router = DefaultRouter(trailing_slash=False)
 router.register('intake-sessions', IntakeSessionViewSet, basename='intake-session')
 router.register('rules/session-matrix', RulesConfigurationViewSet, basename='rules-config')
 

@@ -20,8 +20,8 @@ def profile(request):
             'username': request.user.username,
             'email': request.user.email,
             'role': su.role,
-            'sub_center_id': str(su.sub_center_id),
-            'sub_center_code': su.sub_center.center_code,
+            'sub_center_id': str(su.sub_center_id) if su.sub_center_id else None,
+            'sub_center_code': su.sub_center.center_code if su.sub_center else None,
         })
     except SystemUser.DoesNotExist:
         return Response({
@@ -30,6 +30,7 @@ def profile(request):
             'email': request.user.email,
             'role': 'super_admin' if request.user.is_superuser else None,
             'sub_center_id': None,
+            'sub_center_code': None,
         })
 
 
@@ -50,7 +51,7 @@ def verify_mfa(request):
 
 
 urlpatterns = [
-    path('token/', obtain_auth_token, name='token-auth'),
-    path('profile/', profile, name='profile'),
-    path('mfa/verify/', verify_mfa, name='verify-mfa'),
+    path('token', obtain_auth_token, name='token-auth'),
+    path('profile', profile, name='profile'),
+    path('mfa/verify', verify_mfa, name='verify-mfa'),
 ]
