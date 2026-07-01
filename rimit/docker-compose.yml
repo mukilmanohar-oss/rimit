@@ -1,0 +1,82 @@
+# RIMIT B2B Aggregator - Development Docker Compose
+# Per Section 14.2 of the Development Plan
+version: '3.8'
+
+services:
+  app:
+    build: .
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --reload
+    volumes:
+      - ./:/app
+    env_file: .env
+    depends_on: [db, redis, keycloak]
+    ports:
+      - '8000:8000'
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+
+  celery:
+    build: .
+    command: celery -A config worker -l info --concurrency=4
+    volumes:
+      - ./:/app
+    env_file: .env
+    depends_on: [redis, db]
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+
+  celerybeat:
+    build: .
+    command: celery -A config beat -l info
+    volumes:
+      - ./:/app
+    env_file: .env
+    depends_on: [redis, db]
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: rimit
+      POSTGRES_USER: rimit
+      POSTGRES_PASSWORD: dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+
+  redis:
+    image: redis:7
+    ports:
+      - '6379:6379'
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/rimit
+      KC_DB_USERNAME: rimit
+      KC_DB_PASSWORD: dev
+    command: start-dev
+    ports:
+      - '8080:8080'
+    depends_on: [db]
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - miniodata:/data
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+
+volumes:
+  pgdata: {}
+  miniodata: {}
