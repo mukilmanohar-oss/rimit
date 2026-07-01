@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; background: #ffffff; }
+  #target { padding: 24px; }
+  svg { max-width: 100%; height: auto; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div id="target" class="mermaid">flowchart TB
+    classDef ingress fill:#e8f1f8,stroke:#1f6c92,stroke-width:2px,color:#131515
+    classDef app fill:#eef5f9,stroke:#32454e,stroke-width:2px,color:#131515
+    classDef data fill:#eaf3ec,stroke:#529067,stroke-width:2px,color:#131515
+    classDef queue fill:#f5efe7,stroke:#8c7443,stroke-width:2px,color:#131515
+    classDef sec fill:#fdf6e3,stroke:#d6b656,stroke-width:2px,color:#131515
+
+    NGINX["Nginx<br/>Reverse Proxy<br/>SSL / Rate-Limit"]
+    subgraph APP["Django 5.x Application (Monolith)"]
+        DRF["DRF ViewSets<br/>+ drf-spectacular"]
+        SIG["Django Signals<br/>post_save triggers"]
+        SER["DRF Serializers<br/>+ Validation"]
+        RLS["RLS Middleware<br/>Sets tenant context"]
+    end
+    CELERY["Celery Workers<br/>Async tasks"]
+    BEAT["Celery Beat<br/>Scheduled jobs"]
+    REDIS["Redis<br/>Broker + Cache"]
+    PG["PostgreSQL 16<br/>RLS + GIN tsvector<br/>+ JSONB"]
+    KC["Keycloak<br/>OIDC / OAuth2"]
+    MINIO["MinIO / S3<br/>Encrypted at rest"]
+
+    NGINX --> DRF
+    DRF --> SER
+    SER --> RLS
+    RLS --> PG
+    DRF --> SIG
+    SIG --> CELERY
+    CELERY --> REDIS
+    BEAT --> REDIS
+    CELERY --> PG
+    CELERY --> MINIO
+    DRF <-->|JWT verify| KC
+    DRF -->|presigned URLs| MINIO
+
+    class NGINX ingress
+    class DRF,SIG,SER,RLS,CELERY,BEAT app
+    class PG,REDIS,MINIO data
+    class KC sec
+</div>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'base', securityLevel: 'loose',
+    themeVariables: {
+      primaryColor: '#e8f1f8',
+      primaryTextColor: '#131515',
+      primaryBorderColor: '#1f6c92',
+      lineColor: '#32454e',
+      secondaryColor: '#eaf3ec',
+      tertiaryColor: '#fdf6e3',
+      fontFamily: 'Helvetica, Arial, sans-serif',
+      fontSize: '14px'
+    }
+  });
+</script>
+</body></html>

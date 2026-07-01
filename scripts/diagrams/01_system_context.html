@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; background: #ffffff; }
+  #target { padding: 24px; }
+  svg { max-width: 100%; height: auto; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div id="target" class="mermaid">flowchart LR
+    classDef actor fill:#f5f5f5,stroke:#888,stroke-width:1.5px,color:#222
+    classDef system fill:#e8f1f8,stroke:#1f6c92,stroke-width:2px,color:#131515
+    classDef external fill:#fbeee9,stroke:#b85450,stroke-width:2px,color:#222
+    classDef idp fill:#fdf6e3,stroke:#d6b656,stroke-width:2px,color:#222
+
+    SA["Super Admin (MD)<br/>RIMIT Leadership"]
+    AH["Academic Heads<br/>& Managers"]
+    CO["Counselors /<br/>Admission Officers"]
+    FO["Finance /<br/>Accounts Officers"]
+    SC["Sub-Center Staff<br/>(B2B Partners)"]
+
+    SYS["RIMIT-SPES B2B Aggregator<br/>& Admission Mgmt System<br/>(Django Monolith)"]
+
+    META["Meta Ads<br/>(FB / Instagram<br/>Lead Gen)"]
+    WA["WhatsApp<br/>Business API"]
+    SMTP["SMTP /<br/>Amazon SES"]
+    PAY["Razorpay<br/>Payment Gateway"]
+    S3["MinIO / S3<br/>Document Vault"]
+    KC["Keycloak<br/>(OIDC / MFA)"]
+
+    SA --> SYS
+    AH --> SYS
+    CO --> SYS
+    FO --> SYS
+    SC --> SYS
+
+    META -->|lead webhook| SYS
+    SYS -->|notifications| WA
+    SYS -->|email| SMTP
+    SYS -->|payment| PAY
+    SYS -->|docs| S3
+    SYS <-->|auth| KC
+
+    class SA,AH,CO,FO,SC actor
+    class SYS system
+    class META,WA,SMTP,PAY,S3 external
+    class KC idp
+</div>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'base', securityLevel: 'loose',
+    themeVariables: {
+      primaryColor: '#e8f1f8',
+      primaryTextColor: '#131515',
+      primaryBorderColor: '#1f6c92',
+      lineColor: '#32454e',
+      secondaryColor: '#eaf3ec',
+      tertiaryColor: '#fdf6e3',
+      fontFamily: 'Helvetica, Arial, sans-serif',
+      fontSize: '14px'
+    }
+  });
+</script>
+</body></html>

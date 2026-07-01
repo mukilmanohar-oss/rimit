@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; background: #ffffff; }
+  #target { padding: 24px; }
+  svg { max-width: 100%; height: auto; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div id="target" class="mermaid">sequenceDiagram
+    autonumber
+    participant SC as Sub-Center Staff
+    participant API as Django DRF
+    participant RLS as RLS Middleware
+    participant DB as PostgreSQL
+    participant SIG as Django Signal
+    participant Q as Celery Queue
+    participant WA as WhatsApp API
+    participant PAY as Razorpay
+
+    SC->>API: POST /api/v1/enrollments/<br/>{student_id, course_id, session_id}
+    API->>API: DRF Serializer<br/>validates payload
+    API->>API: Session Enforcement Matrix<br/>rule check (e.g. fresh candidate<br/>cannot enroll in July session)
+    alt Rule Violated
+        API-->>SC: 400 Rejected + suggests<br/>valid October session
+    else Rule Passed
+        API->>RLS: SET app.current_sub_center_id
+        RLS->>DB: INSERT enrollments<br/>(RLS enforces tenant)
+        DB-->>API: enrollment_id
+        API->>SIG: post_save trigger
+        SIG->>Q: enqueue notify + payment_link
+        API-->>SC: 201 Created {enrollment_id,<br/>status:"Applied"}
+        Q->>PAY: create payment link
+        PAY-->>Q: payment_url
+        Q->>WA: send "Fee Pending"<br/>template to student
+        WA-->>Q: message_id
+        Q->>DB: UPDATE enrollments<br/>SET status="Fee Link Sent"
+    end
+</div>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'base', securityLevel: 'loose',
+    themeVariables: {
+      primaryColor: '#e8f1f8',
+      primaryTextColor: '#131515',
+      primaryBorderColor: '#1f6c92',
+      lineColor: '#32454e',
+      secondaryColor: '#eaf3ec',
+      tertiaryColor: '#fdf6e3',
+      fontFamily: 'Helvetica, Arial, sans-serif',
+      fontSize: '14px'
+    }
+  });
+</script>
+</body></html>

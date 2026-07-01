@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RIMIT Development Plan - Cover</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Playfair+Display:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Cover aliases from cascade palette (cold/minimal, seed=42) */
+    --c-bg: #f4f5f5;
+    --c-accent: #1f6c92;
+    --c-text: #131515;
+    --c-muted: #747b7e;
+    --c-mid: #32454e;
+    --c-surface: #e8eaeb;
+  }
+  @page { size: 794px 1123px; margin: 0; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--c-bg);
+    color: var(--c-text);
+    font-family: 'Inter', Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .cover {
+    position: relative;
+    width: 794px;
+    height: 1123px;
+    background: var(--c-bg);
+    overflow: hidden;
+  }
+  /* Layer 1: Background grid pattern - very subtle */
+  .grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(31, 108, 146, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(31, 108, 146, 0.04) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  /* Layer 2: Ultra-thick left anchor line */
+  .anchor-line {
+    position: absolute;
+    left: 95.28px; /* 0.12 * 794 */
+    top: 112.3px;  /* 0.10 * 1123 */
+    bottom: 112.3px; /* 0.90 * 1123 → height = 0.80 * 1123 */
+    width: 6px;
+    background: var(--c-accent);
+    z-index: 2;
+  }
+  /* Layer 3: Content - left offset gives 40px gap from anchor line right edge */
+  .content {
+    position: absolute;
+    left: 145px; /* anchor right edge (101.28) + 40px gap + 4px buffer */
+    right: 79.4px;  /* 0.10 * 794 right padding */
+    top: 0;
+    bottom: 0;
+    z-index: 3;
+  }
+  /* Drawer A: Kicker */
+  .kicker {
+    position: absolute;
+    top: 168.45px; /* 0.15 * 1123 */
+    left: 0;
+    font-size: 11pt;
+    font-weight: 500;
+    letter-spacing: 3pt;
+    text-transform: uppercase;
+    color: var(--c-muted);
+    opacity: 0.85;
+  }
+  /* Accent bar above title - separate element with 40px+ gap from kicker */
+  .accent-bar {
+    position: absolute;
+    top: 250px;
+    left: 0;
+    width: 56px;
+    height: 4px;
+    background: var(--c-accent);
+    z-index: 3;
+  }
+  /* Drawer B: Hero Title */
+  .title {
+    position: absolute;
+    top: 300px; /* 250 + 4 + 46 = 300, gives 46px gap from accent bar */
+    left: 0;
+    width: 560px;
+    font-family: 'Playfair Display', 'Inter', serif;
+    font-size: 40pt;
+    font-weight: 900;
+    line-height: 1.10;
+    letter-spacing: -0.5pt;
+    color: var(--c-text);
+  }
+  /* Drawer C: Summary */
+  .summary {
+    position: absolute;
+    top: 620px; /* clear of 3-line title at 40pt starting at 300 */
+    left: 0;
+    width: 470px; /* W * 0.6 ≈ 476 */
+    font-size: 13pt;
+    font-weight: 400;
+    line-height: 1.65;
+    color: var(--c-text);
+    opacity: 0.85;
+  }
+  .summary strong {
+    color: var(--c-accent);
+    font-weight: 600;
+  }
+  /* Drawer D: Meta */
+  .meta {
+    position: absolute;
+    top: 850px; /* ~0.76 * 1123 */
+    left: 0;
+    right: 0;
+  }
+  .meta-label {
+    font-size: 9pt;
+    font-weight: 600;
+    letter-spacing: 2pt;
+    text-transform: uppercase;
+    color: var(--c-muted);
+    margin-bottom: 4px;
+  }
+  .meta-value {
+    font-size: 13pt;
+    font-weight: 500;
+    color: var(--c-text);
+    margin-bottom: 16px;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    width: 500px;
+  }
+  .meta-cell { display: flex; flex-direction: column; }
+  /* Bottom decorative tag row */
+  .tag-row {
+    position: absolute;
+    bottom: 60px;
+    left: 125.28px;
+    right: 79.4px;
+    display: flex;
+    gap: 12px;
+    z-index: 3;
+  }
+  .tag {
+    font-size: 9pt;
+    font-weight: 500;
+    letter-spacing: 1.5pt;
+    text-transform: uppercase;
+    color: var(--c-mid);
+    border: 1px solid var(--c-mid);
+    padding: 6px 14px;
+    border-radius: 2px;
+  }
+  .tag.accent {
+    background: var(--c-accent);
+    color: #fff;
+    border-color: var(--c-accent);
+  }
+  /* Top-right corner: confidential stamp */
+  .corner-mark {
+    position: absolute;
+    top: 60px;
+    right: 60px;
+    text-align: right;
+    z-index: 3;
+  }
+  .corner-mark .doc-num {
+    font-size: 9pt;
+    font-weight: 600;
+    letter-spacing: 2pt;
+    color: var(--c-muted);
+    text-transform: uppercase;
+  }
+  .corner-mark .doc-date {
+    font-size: 10pt;
+    font-weight: 500;
+    color: var(--c-text);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="grid-bg"></div>
+  <div class="anchor-line"></div>
+
+  <div class="corner-mark">
+    <div class="doc-num">Doc RMT-ARCH-2026-001</div>
+    <div class="doc-date">July 2026</div>
+  </div>
+
+  <div class="content">
+    <div class="kicker">Technical Development Plan &amp; Architecture Blueprint</div>
+
+    <div class="accent-bar"></div>
+    <div class="title">
+      B2B University<br>
+      Aggregator &amp;<br>
+      Admission Platform
+    </div>
+
+    <div class="summary">
+      A comprehensive engineering blueprint for the <strong>RIMIT Education &amp; SPES Education</strong> unified B2B portal &mdash; consolidating India&rsquo;s university ecosystem into a single cloud-native platform with centralized admission management, sub-center partner workflows, and omnichannel notifications.
+    </div>
+
+    <div class="meta">
+      <div class="meta-grid">
+        <div class="meta-cell">
+          <div class="meta-label">Prepared For</div>
+          <div class="meta-value">RIMIT Educational Charitable Trust</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-label">Point of Contact</div>
+          <div class="meta-value">Abdul Bari Chengana, MD</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-label">Stack</div>
+          <div class="meta-value">Django &middot; PostgreSQL &middot; Keycloak &middot; Celery</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-label">Timeline</div>
+          <div class="meta-value">20 Weeks (5 Phases)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tag-row">
+    <span class="tag accent">Confidential</span>
+    <span class="tag">Modular Monolith</span>
+    <span class="tag">RLS Multi-Tenancy</span>
+    <span class="tag">OIDC / MFA</span>
+  </div>
+</div>
+</body>
+</html>

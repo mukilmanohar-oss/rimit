@@ -1,0 +1,218 @@
+REQUEST FOR PROPOSAL (RFP)
+Comprehensive B2B University Aggregator & Centralized Admission Management System
+
+
+
+
+                                 RIMIT Education & SPES Education (Managed by RIMIT Educational Charitable
+   Organization
+                                 Trust)
+
+   Point of Contact              Abdul Bari Chengana, Managing Director
+
+   Primary Locations             Kerala, India (Core hubs in Kochi & Malappuram)
+
+   Date of Issuance              July 1, 2026
+
+   Submission Deadline           [Insert Submission Deadline Date]
+
+
+
+     1. Executive Summary
+   RIMIT Education, operating in conjunction with SPES Education under the RIMIT Educational Charitable
+   Trust, is inviting proposals from established software development agencies to build a robust, scalable,
+   cloud-based Business-to-Business (B2B) Educational Portal and Centralized Admission Management
+   System.
+
+   The objective of this project is twofold. First, it will serve as a national University Aggregator, bringing
+   diverse universities across India under a single digital umbrella where information regarding courses,
+   dynamic fee structures, eligibility criteria, and digital prospectuses is systematically structured. Second, it
+   will function as an operational B2B Portal empowering our vast network of sub-centers and partner
+   institutions nationwide to directly register students, manage demographic and academic profiles, and
+   securely upload required admission documents.
+
+
+     2. Company Background & Operational Context
+   RIMIT Education is a premier educational consultancy and distance education administration
+   organization based in Kerala. Our critical roles include acting as the National Coordinator for Kerala for
+   Mangalayatan University (Online/ODL streams) and serving as the Regional Center Coordinator in
+   Kerala for the Board of Open Schooling and Skill Education (BOSSE).
+
+   Our daily operations involve managing extensive student recruitment pipelines across decentralized sub-
+   centers. Currently, partner institutions suffer from fragmented data spread across disjointed university
+   channels. This platform will unify these offerings, optimizing administrative productivity and accuracy.
+
+
+     3. Comprehensive Project Scope & Functional Modules
+   The selected vendor will deliver an end-to-end cloud platform encompassing the following core
+   architectural modules:
+
+
+
+
+   RIMIT Education - Confidential RFP                                                                  Page 1 of 5
+Module 1: Centralized University Aggregator Hub
+
+ • Unified University Directory: Comprehensive profiles for all partner universities across India,
+   managed dynamically via a central administrative panel.
+ • Course & Fee Repository: Exhaustive listing of courses (Undergraduate, Postgraduate, Diploma,
+   Open Schooling) searchable by stream, eligibility, duration, and structured fees.
+ • Prospectus & Document Library: A centralized digital vault allowing instant access, viewing, and
+   downloading of university prospectuses, academic calendars, syllabi, and official notification PDFs.
+
+Module 2: B2B Sub-Center Partner & Admission Portal
+
+   Critical Operational Requirement: Sub-centers must be equipped with an intuitive interface to
+   handle student enrollments autonomously while adhering to rigid validation protocols set by the
+   central management.
+
+
+ • Direct Student Registration: Authorized sub-centers can log in securely to input candidate details
+   including full demographic profiles, contact data, and chosen academic pathways.
+ • Document Upload Vault: Seamless drag-and-drop mechanism for sub-centers to upload high-
+   resolution applicant documentation (Identity Proofs, Marklists, Migration Certificates, and Experience
+   Certificates).
+ • Real-time Status Tracking: B2B partners can monitor the exact position of their candidates within
+   the multi-stage admission workflow (e.g., Applied, Document Verified, Fee Paid, Enrollment
+   Generated).
+
+Module 3: Advanced Business Logic & Intake Controls
+
+ • Session Enforcement Matrix: Programmatic validation rules mapping specific student eligibility to
+   distinct intake cycles. For example, the software must programmatically enforce constraints
+   preventing fresh candidates from enrolling in restricted sessions (e.g., the July session), automatically
+   routing them to subsequent valid terms (e.g., October session).
+ • Multi-tier Access Hierarchy: Granular access configuration mapping directly to specific
+   organizational roles:
+     ◦ Super Admin (MD): Complete operational, financial, and architectural control.
+     ◦ Academic Head / Managers: Holistic pipeline supervision and macro-analytical reporting.
+     ◦ Academic Counselors / Admission Officers: Localized view limited to directly assigned leads or
+       sub-center allocations.
+     ◦ Finance / Accounts Officers: Financial modules including ledger tracking, fee confirmations, and
+       receipt issuance.
+
+
+
+
+RIMIT Education - Confidential RFP                                                                Page 2 of 5
+Module 4: Marketing & Communication Integrations
+
+ • Lead Ingestion Engine: Automated hooks capturing inbound leads from Meta advertising
+   infrastructures (Facebook & Instagram Lead Generation architectures) straight into the core CRM.
+ • Omnichannel Notifications: Direct integration with the WhatsApp Business API and SMTP
+   gateways to broadcast instant automated notifications to students and sub-centers upon key workflow
+   updates.
+
+
+  4. Technical Requirements & Architecture Standards
+
+ Category                            Technical Specification Requirement
+
+
+ Deployment Model                    Cloud-native web application, mobile-responsive design optimizing layouts
+                                     across Desktop, Tablet, and Mobile devices.
+
+
+ Search Infrastructure               Enterprise-grade high-speed search indexing engine (e.g., Elasticsearch)
+                                     allowing multi-attribute filtering (State, University, Budget, Stream, Mode).
+
+
+ Storage & Document Vault            Secure cloud storage (e.g., AWS S3 with encryption at rest) optimized for
+                                     high-volume PDF prospectus downloads and student document uploads.
+
+
+ Security Protocols                  Multi-Factor Authentication (MFA / OTP via SMS/WhatsApp) for B2B sub-
+                                     center logins, SSL/TLS data encryption in transit, and continuous automated
+                                     fallback backups.
+
+
+ API Capabilities                    Extensible RESTful API architecture enabling hassle-free connections with
+                                     payment gateways, external university webhooks, and lead-generation tools.
+
+
+
+
+RIMIT Education - Confidential RFP                                                                          Page 3 of 5
+  5. Expected Project Timeline & Key Milestones
+
+ Project Phase                  Core Deliverables & Expectations                         Estimated Deadline
+
+
+ Phase 1: Discovery             UI/UX wireframes, full system architecture design,       [Vendor to Propose]
+                                and final database schema mapping.
+
+
+ Phase 2: Alpha Version         Centralized University Aggregator Hub database live;     [Vendor to Propose]
+                                Admin CMS interface operational.
+
+
+ Phase 3: Beta Version          B2B Sub-center portal launch with candidate data         [Vendor to Propose]
+                                entry modules and secure document upload vault.
+
+
+ Phase 4: Testing & UAT         Rigorous stress testing, role-permission verification,   [Vendor to Propose]
+                                and end-to-end workflow evaluation by RIMIT staff.
+
+
+ Phase 5: Deployment            Production environment launch, active database           [Vendor to Propose]
+                                migration, and sub-center training workshops.
+
+
+
+
+  6. Vendor Proposal Submission Requirements
+Responding agencies must structure their submissions cleanly, providing detailed insight into the
+following items:
+
+1. Corporate Overview: Executive summary of corporate history, engineering team size, location of
+   development centers, and core areas of specialization.
+2. Technical Blueprint: Explicit definition of the proposed tech stack (Backend, Frontend, Databases,
+   Cloud Infrastructure) detailing how high-concurrency document searches and secure asset streaming
+   will be managed.
+3. Relevant Case Studies: Documentation of at least two enterprise-scale projects of comparable
+   complexity (e.g., B2B aggregator portals, multi-tier CRM systems, or heavy educational management
+   ERPs).
+4. Commercial Breakdown: Itemized costing covering UI/UX phase, development cycles, cloud setup,
+   API integration expenses, and ongoing annual maintenance contracts (AMC).
+5. Implementation Schedule: Comprehensive timeline chart detailing development sprints and
+   deployment strategy.
+
+
+
+
+RIMIT Education - Confidential RFP                                                                      Page 4 of 5
+  7. Evaluation Criteria
+
+ Evaluation Dimension                                                   Assigned Weight
+
+
+ Technical Approach & Database Design for Aggregator Platform           30%
+
+
+ B2B Portal Execution Strategy & Secure Document Management             25%
+
+
+ Commercial Proposal, Cost Competitiveness & Scalability Value          20%
+
+
+ Proven Experience & Quality of Portfolio Case Studies                  15%
+
+
+ Post-launch Service Level Agreement (SLA) & Training Capabilities      10%
+
+
+
+
+  8. Submission Guidelines
+ • Document Format: Proposals must be submitted strictly in electronic PDF format.
+ • Clarifications & Q&A: Technical or business logic questions concerning this RFP can be forwarded
+   to the point of contact prior to the Q&A deadline.
+ • Delivery Address: Submissions should be securely transmitted via email to the corporate address
+   with the explicit subject line: "RIMIT Education - Enterprise B2B Aggregator System Proposal -
+   [Vendor Name]".
+
+
+
+
+RIMIT Education - Confidential RFP                                                         Page 5 of 5
+

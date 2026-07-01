@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; background: #ffffff; }
+  #target { padding: 24px; }
+  svg { max-width: 100%; height: auto; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div id="target" class="mermaid">flowchart TB
+    classDef public fill:#e8f1f8,stroke:#1f6c92,stroke-width:2px,color:#131515
+    classDef private fill:#eaf3ec,stroke:#529067,stroke-width:2px,color:#131515
+    classDef isolated fill:#fdf6e3,stroke:#d6b656,stroke-width:2px,color:#131515
+    classDef external fill:#fbeee9,stroke:#b85450,stroke-width:2px,color:#222
+
+    CDN["Cloudflare CDN<br/>DNS + DDoS"]
+
+    subgraph VPC["VPC 10.0.0.0/16"]
+        subgraph PUB1["Public Subnet AZ-1"]
+            ALB["ALB<br/>HTTPS :443"]
+            NG1["Nginx<br/>ECS Fargate"]
+        end
+        subgraph PUB2["Public Subnet AZ-2"]
+            NG2["Nginx<br/>(standby)"]
+        end
+        subgraph PRIV1["Private Subnet AZ-1"]
+            APP1["Django App<br/>ECS Fargate x2"]
+            CEL1["Celery Worker<br/>ECS Fargate x2"]
+            BEAT1["Celery Beat<br/>Fargate x1"]
+        end
+        subgraph PRIV2["Private Subnet AZ-2"]
+            APP2["Django App<br/>(standby)"]
+            CEL2["Celery Worker<br/>(standby)"]
+        end
+        subgraph DATA["Isolated Data Subnet"]
+            RDS["RDS PostgreSQL 16<br/>Multi-AZ<br/>+ Read Replica"]
+            REDIS["ElastiCache Redis<br/>Multi-AZ"]
+            KC["Keycloak on ECS<br/>+ RDS schema"]
+            MINIO["MinIO Cluster<br/>3 nodes / AZ-distributed"]
+        end
+    end
+
+    S3["S3 Backup Bucket<br/>WAL archives + dumps"]
+
+    CDN --> ALB
+    ALB --> NG1
+    ALB --> NG2
+    NG1 --> APP1
+    NG2 --> APP2
+    APP1 --> RDS
+    APP2 --> RDS
+    APP1 --> REDIS
+    APP1 --> KC
+    APP1 --> MINIO
+    CEL1 --> REDIS
+    CEL1 --> RDS
+    CEL1 --> MINIO
+    BEAT1 --> REDIS
+    RDS -->|WAL every 15min| S3
+
+    class CDN external
+    class ALB,NG1,NG2 public
+    class APP1,APP2,CEL1,CEL2,BEAT1 private
+    class RDS,REDIS,KC,MINIO isolated
+    class S3 external
+</div>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'base', securityLevel: 'loose',
+    themeVariables: {
+      primaryColor: '#e8f1f8',
+      primaryTextColor: '#131515',
+      primaryBorderColor: '#1f6c92',
+      lineColor: '#32454e',
+      secondaryColor: '#eaf3ec',
+      tertiaryColor: '#fdf6e3',
+      fontFamily: 'Helvetica, Arial, sans-serif',
+      fontSize: '14px'
+    }
+  });
+</script>
+</body></html>
