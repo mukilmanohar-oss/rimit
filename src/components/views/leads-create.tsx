@@ -21,9 +21,28 @@ export function LeadsCreateView({ profile }: { profile: UserProfile }) {
   const nextStep = () => setStep(s => Math.min(s + 1, 3));
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
-  const handleSubmit = async () => {
+    const handleSubmit = async () => {
     setSubmitting(true);
     try {
+      let address_block = undefined;
+      if (formData.address_line_1 && formData.city && formData.state && formData.pincode) {
+        address_block = {
+          perm_domicile_type: 'Other',
+          perm_address: formData.address_line_1 + (formData.address_line_2 ? ', ' + formData.address_line_2 : ''),
+          perm_country: formData.country || 'India',
+          perm_state: formData.state,
+          perm_district: formData.city,
+          perm_city: formData.city,
+          perm_pincode: formData.pincode,
+          corr_address: formData.address_line_1 + (formData.address_line_2 ? ', ' + formData.address_line_2 : ''),
+          corr_country: formData.country || 'India',
+          corr_state: formData.state,
+          corr_district: formData.city,
+          corr_city: formData.city,
+          corr_pincode: formData.pincode,
+        };
+      }
+
       const payload = {
         full_name: formData.full_name,
         dob: formData.dob || undefined,
@@ -36,23 +55,17 @@ export function LeadsCreateView({ profile }: { profile: UserProfile }) {
         email: formData.email,
         parent_name: formData.parent_name || undefined,
         parent_phone: formData.parent_phone || undefined,
-        address_block: {
-          address_line_1: formData.address_line_1,
-          address_line_2: formData.address_line_2 || undefined,
-          city: formData.city,
-          state: formData.state,
-          pincode: formData.pincode,
-          country: formData.country,
-          address_type: formData.address_type,
-        },
+        address_block: address_block,
         academic_histories: formData.qualification ? [{
           qualification: formData.qualification,
-          institution: formData.institution,
+          institution: formData.institution || 'N/A',
+          board_university: formData.institution || 'N/A',
           year_of_passing: formData.year_of_passing ? parseInt(formData.year_of_passing) : undefined,
           examination: formData.examination,
           score_type: formData.score_type,
           score_value: formData.score_value ? parseFloat(formData.score_value) : undefined,
           percentage_marks: formData.percentage_marks ? parseFloat(formData.percentage_marks) : undefined,
+          result: 'Pass'
         }] : [],
         employment_status: formData.employment_status || undefined,
       };
@@ -122,7 +135,7 @@ export function LeadsCreateView({ profile }: { profile: UserProfile }) {
                   <Input label="Primary Phone *" value={formData.primary_phone} onChange={v => update('primary_phone', v)} placeholder="9876543210" />
                   <Input label="Email Address *" type="email" value={formData.email} onChange={v => update('email', v)} placeholder="john@example.com" />
                   <Input label="Date of Birth" type="date" value={formData.dob} onChange={v => update('dob', v)} />
-                  <Select label="Gender" value={formData.gender} onChange={v => update('gender', v)} options={['Male', 'Female', 'Other']} />
+                  <Select label="Gender" value={formData.gender} onChange={v => update('gender', v)} options={[{value: 'M', label: 'Male'}, {value: 'F', label: 'Female'}, {value: 'O', label: 'Other'}]} />
                   <Input label="Aadhar Number" value={formData.aadhar_number} onChange={v => update('aadhar_number', v)} placeholder="12 digit number" />
                   <Select label="Religion" value={formData.religion} onChange={v => update('religion', v)} options={['Hindu', 'Muslim', 'Christian', 'Sikh', 'Other']} />
                   <Select label="Category" value={formData.category} onChange={v => update('category', v)} options={['General', 'OBC', 'SC', 'ST']} />

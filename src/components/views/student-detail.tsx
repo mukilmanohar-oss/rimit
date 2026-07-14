@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { admissions, type Student, type StudentDoc, type StudentAcademicHistory, type UserProfile } from '@/lib/api';
 import { PageHeader, LoadingState, ErrorState, EmptyState, StatusBadge, ConfirmDialog } from '../rimit-shell';
 import { toast } from 'sonner';
+import { usePermissions, useExtendedPermissions } from '@/lib/permissions';
 
 interface StudentDetailProps {
   student: Student;
@@ -44,8 +45,16 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
   const [rejectingDocId, setRejectingDocId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  const canEdit = profile.role === 'counselor' || profile.role === 'academic_head' || profile.role === 'super_admin';
-  const isAdmin = profile.role === 'academic_head' || profile.role === 'super_admin';
+  const studentPerms = usePermissions(profile.role, 'student');
+  const docPerms = useExtendedPermissions(profile.role, 'student_doc');
+  const academicPerms = usePermissions(profile.role, 'academic_history');
+
+  const canEditStudent = studentPerms.canUpdate;
+  const canDeleteStudent = studentPerms.canDelete;
+  const canAddAcademic = academicPerms.canCreate;
+  const canAddDoc = docPerms.canCreate;
+  const canVerifyRejectDoc = docPerms.canVerify || docPerms.canReject;
+  const canDeleteDoc = docPerms.canDelete;
 
   const load = async () => {
     setLoading(true);
@@ -181,7 +190,7 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
         breadcrumbs={[{ label: 'Students', onClick: onBack }, { label: student.full_name }]}
         action={
           <div className="flex gap-2">
-            {onEdit && canEdit && (
+            {onEdit && canEditStudent && (
               <button
                 onClick={onEdit}
                 className="border border-border text-foreground hover:bg-muted rounded-md px-3 py-1.5 text-sm font-medium"
@@ -189,7 +198,7 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
                 Edit Student
               </button>
             )}
-            {canEdit && (
+            {canDeleteStudent && (
               <button
                 onClick={() => setStudentToDelete(true)}
                 className="bg-destructive text-white hover:bg-destructive/90 rounded-md px-3 py-1.5 text-sm font-medium"
@@ -323,7 +332,7 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-base font-semibold text-foreground">Academic History</h3>
-            {canEdit && !showAcademicForm && (
+            {canAddAcademic && !showAcademicForm && (
               <button
                 onClick={() => setShowAcademicForm(true)}
                 className="bg-primary text-primary-foreground rounded-md px-3 py-1.5 text-sm font-medium hover:bg-primary/90"
@@ -484,7 +493,7 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-base font-semibold text-foreground">Documents Vault</h3>
-            {canEdit && !showDocForm && (
+            {canAddDoc && !showDocForm && (
               <button
                 onClick={() => setShowDocForm(true)}
                 className="bg-primary text-primary-foreground rounded-md px-3 py-1.5 text-sm font-medium hover:bg-primary/90"
@@ -591,7 +600,7 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
                       </td>
                       <td className="px-4 py-3 text-right space-x-2">
                         {/* Verify/Reject Controls for Admin roles */}
-                        {isAdmin && d.status === 'pending' && (
+                        {canVerifyRejectDoc && d.status === 'pending' && (
                           <>
                             {rejectingDocId === d.id ? (
                               <div className="inline-flex items-center gap-1.5">
@@ -633,7 +642,7 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
                             )}
                           </>
                         )}
-                        {canEdit && (
+                        {canDeleteDoc && (
                           <button
                             onClick={() => setDocToDelete(d.id)}
                             className="text-destructive hover:underline text-xs font-medium"

@@ -513,30 +513,35 @@ function StudentEditForm({ student, onBack, onCancel }: { student: Student; onBa
     setSubmitting(true);
     setError(null);
     try {
-      const payload = {
-        full_name: form.full_name, dob: form.dob, gender: form.gender,
-        primary_phone: form.primary_phone, email: form.email,
-        parent_name: form.parent_name, parent_phone: form.parent_phone,
-                alternate_email: form.alternate_email,
-        alternate_phone: form.alternate_phone,
-        admission_type: form.admission_type,
-        admission_semester: form.admission_semester,
-        address_block: {
+      let address_block = undefined;
+      if (form.address_line1 && form.address_city && form.address_state && form.address_pincode) {
+        address_block = {
           perm_domicile_type: 'Other',
           domicile_state: form.address_state,
           perm_address: form.address_line1,
           perm_country: 'INDIA',
           perm_state: form.address_state,
-          perm_district: form.address_district,
+          perm_district: form.address_city, // fallback
           perm_city: form.address_city,
           perm_pincode: form.address_pincode,
           corr_address: form.address_line1,
           corr_country: 'INDIA',
           corr_state: form.address_state,
-          corr_district: form.address_district,
+          corr_district: form.address_city,
           corr_city: form.address_city,
           corr_pincode: form.address_pincode,
-        },
+        };
+      }
+
+      const payload = {
+        full_name: form.full_name, dob: form.dob, gender: form.gender,
+        primary_phone: form.primary_phone, email: form.email,
+        parent_name: form.parent_name, parent_phone: form.parent_phone,
+        alternate_email: form.alternate_email,
+        alternate_phone: form.alternate_phone,
+        admission_type: form.admission_type,
+        admission_semester: form.admission_semester,
+        address_block: address_block,
       };
       await admissions.updateStudent(student.id, payload);
       toast.success(`? ${student.full_name} updated successfully.`);
