@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partner with BOSSE Sikkim | B2B Portal</title>
+    
+    <!-- Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons: FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        bosse: {
+                            blue: '#0B2B5E',
+                            green: '#006B3F',
+                            gold: '#D4AF37',
+                            light: '#F8FAFC'
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #0B2B5E 0%, #1a4a8c 100%);
+        }
+        .green-gradient {
+            background: linear-gradient(135deg, #006B3F 0%, #00995a 100%);
+        }
+        /* Custom range slider styling */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #006B3F;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #E2E8F0;
+            border-radius: 4px;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Accordion transition */
+        .accordion-content {
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.active {
+            max-height: 500px; /* Arbitrary large max-height */
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased overflow-x-hidden pb-20 md:pb-0">
+
+    <nav class="glass-nav fixed w-full top-0 z-40 transition-all duration-300 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo Area -->
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full bg-bosse-blue flex items-center justify-center text-white font-bold text-xl shadow-md">
+                        <i class="fa-solid fa-tree"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-bosse-blue leading-tight">RIMIT</h1>
+                        <p class="text-xs font-semibold text-bosse-green tracking-widest uppercase">Educations</p>
+                    </div>
+                </div>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#offerings" class="text-gray-600 hover:text-bosse-green font-medium transition-colors">Offerings</a>
+                    <a href="#process" class="text-gray-600 hover:text-bosse-green font-medium transition-colors">How it Works</a>
+                    <a href="#benefits" class="text-gray-600 hover:text-bosse-green font-medium transition-colors">Benefits</a>
+                    <a href="#roi" class="text-gray-600 hover:text-bosse-green font-medium transition-colors">ROI Calc</a>
+                    <button onclick="toggleModal('loginModal')" class="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-5 py-2.5 rounded-full font-medium transition-all shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-user-lock"></i> Login
+                    </button>
+                    <button onclick="toggleModal('applyModal')" class="bg-bosse-blue hover:bg-blue-900 text-white px-6 py-2.5 rounded-full font-medium transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                        Apply Now
+                    </button>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobileMenuBtn" class="text-bosse-blue focus:outline-none text-2xl">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobileMenu" class="hidden md:hidden bg-white border-t border-gray-100 absolute w-full shadow-lg">
+            <div class="px-4 pt-2 pb-6 space-y-2 text-center">
+                <a href="#offerings" class="block px-3 py-3 text-gray-700 hover:text-bosse-blue font-medium">Offerings</a>
+                <a href="#process" class="block px-3 py-3 text-gray-700 hover:text-bosse-blue font-medium">How it Works</a>
+                <a href="#benefits" class="block px-3 py-3 text-gray-700 hover:text-bosse-blue font-medium">Benefits</a>
+                <button onclick="toggleModal('loginModal')" class="w-full mt-2 bg-gray-100 text-gray-800 px-6 py-3 rounded-xl font-medium">Partner Login</button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="relative pt-32 pb-16 lg:pt-40 lg:pb-20 overflow-hidden bg-white">
+        <!-- Background decorative elements -->
+        <div class="absolute top-0 left-0 w-full h-full bg-bosse-light -z-10"></div>
+        <div class="absolute top-20 right-0 w-96 h-96 bg-bosse-green rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-fade-in -z-10 text-white"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                
+                <!-- Hero Text -->
+                <div class="animate-slide-up text-center lg:text-left">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-bosse-blue font-semibold text-sm mb-6 border border-blue-100">
+                        <span class="w-2 h-2 rounded-full bg-bosse-green animate-pulse"></span>
+                        B2B Partner Program 2026 Open
+                    </div>
+                    <h2 class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
+                        Partner with <br/>
+                        <span class="text-bosse-blue">BOSSE Sikkim!</span>
+                    </h2>
+                    <p class="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
+                        Unlock new business opportunities in the education sector. Grow together, empower education, and build a highly profitable centre with valid certifications.
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                        <button onclick="toggleModal('applyModal')" class="px-8 py-4 bg-bosse-green hover:bg-green-700 text-white rounded-full font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 text-center flex justify-center items-center gap-2">
+                            Start Application <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                        <a href="#roi" class="px-8 py-4 bg-white border-2 border-gray-200 text-gray-700 hover:border-bosse-blue hover:text-bosse-blue rounded-full font-bold text-lg shadow-sm transition-all duration-300 text-center">
+                            Calculate ROI
+                        </a>
+                    </div>
+                    <p class="mt-4 text-sm text-gray-500 font-medium"><i class="fa-solid fa-check-circle text-bosse-green mr-1"></i> Limited centre approvals available per district.</p>
+                </div>
+
+                <!-- Hero Image -->
+                <div class="relative animate-slide-up" style="animation-delay: 0.2s;">
+                    <div class="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
+                        <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Team collaborating" class="w-full h-[400px] object-cover transform hover:scale-105 transition-transform duration-700">
+                        <div class="absolute inset-0 bg-gradient-to-t from-bosse-blue/80 to-transparent"></div>
+                        <div class="absolute bottom-6 left-6 right-6 text-white">
+                            <p class="text-2xl font-bold mb-1">Stronger Partnership.</p>
+                            <p class="text-lg text-blue-100">Greater Impact.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Floating Badges -->
+                    <div class="absolute -bottom-6 -left-6 bg-white p-4 rounded-xl shadow-xl flex items-center gap-4 border border-gray-100 hidden md:flex z-10">
+                        <div class="bg-yellow-100 text-yellow-600 p-3 rounded-full">
+                            <i class="fa-solid fa-star text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-gray-900">Highly Rewarding</p>
+                            <p class="text-sm text-gray-500">B2B Business Model</p>
+                        </div>
+                    </div>
+                    
+                    <div class="absolute -top-6 -right-6 bg-white p-4 rounded-xl shadow-xl flex items-center gap-3 border border-gray-100 hidden md:flex z-10">
+                        <div class="bg-green-100 text-bosse-green p-2 rounded-full">
+                            <i class="fa-solid fa-chart-line text-lg"></i>
+                        </div>
+                        <p class="font-bold text-gray-900 text-sm">High Growth Rate</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trust Bar -->
+    <div class="bg-white border-y border-gray-100 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-6">Recognized & Trusted By</p>
+            <div class="flex flex-wrap justify-center gap-8 md:gap-16 items-center opacity-60 grayscale">
+                <!-- Placeholders for actual authority logos -->
+                <div class="flex items-center gap-2 text-xl font-bold text-gray-600"><i class="fa-solid fa-building-columns"></i> Gov. Approvals</div>
+                <div class="flex items-center gap-2 text-xl font-bold text-gray-600"><i class="fa-solid fa-certificate"></i> ISO 9001:2015</div>
+                <div class="flex items-center gap-2 text-xl font-bold text-gray-600"><i class="fa-solid fa-globe"></i> Global Accreditations</div>
+                <div class="flex items-center gap-2 text-xl font-bold text-gray-600"><i class="fa-solid fa-award"></i> Excellence Awards</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- By The Numbers -->
+    <section class="py-16 bg-gray-50 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div>
+                    <h3 class="text-4xl font-extrabold text-bosse-blue mb-2"><span class="counter" data-target="10">0</span>+</h3>
+                    <p class="text-gray-600 font-medium">Years of Excellence</p>
+                </div>
+                <div>
+                    <h3 class="text-4xl font-extrabold text-bosse-blue mb-2"><span class="counter" data-target="500">0</span>+</h3>
+                    <p class="text-gray-600 font-medium">Active Study Centres</p>
+                </div>
+                <div>
+                    <h3 class="text-4xl font-extrabold text-bosse-blue mb-2"><span class="counter" data-target="50000">0</span>+</h3>
+                    <p class="text-gray-600 font-medium">Students Enrolled</p>
+                </div>
+                <div>
+                    <h3 class="text-4xl font-extrabold text-bosse-green mb-2"><span class="counter" data-target="98">0</span>%</h3>
+                    <p class="text-gray-600 font-medium">Partner Satisfaction</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="offerings" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h3 class="text-bosse-green font-bold tracking-wide uppercase mb-2">Our Invitation</h3>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Core Partnership Opportunities</h2>
+                <p class="text-lg text-gray-600">The Board of Open Schooling and Skill Education (BOSSE) invites applications. Expand your reach, increase revenue, and create a brighter tomorrow.</p>
+            </div>
+
+            <!-- Grid of Offerings -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white rounded-2xl p-8 border border-gray-100 hover:border-bosse-blue shadow-sm hover:shadow-xl transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-blue-50 text-bosse-blue rounded-xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform group-hover:bg-bosse-blue group-hover:text-white">
+                        <i class="fa-solid fa-school"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Authorized Study Centre</h3>
+                    <p class="text-gray-600 text-sm leading-relaxed">Get official approval to operate as a recognized BOSSE centre in your region and boost your credibility.</p>
+                </div>
+
+                <div class="bg-white rounded-2xl p-8 border border-gray-100 hover:border-bosse-green shadow-sm hover:shadow-xl transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-green-50 text-bosse-green rounded-xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform group-hover:bg-bosse-green group-hover:text-white">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Direct Admissions</h3>
+                    <p class="text-gray-600 text-sm leading-relaxed">Seamlessly process admissions for Secondary (10th) & Senior Secondary (12th) programs for your students.</p>
+                </div>
+
+                <div class="bg-white rounded-2xl p-8 border border-gray-100 hover:border-bosse-blue shadow-sm hover:shadow-xl transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-blue-50 text-bosse-blue rounded-xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform group-hover:bg-bosse-blue group-hover:text-white">
+                        <i class="fa-solid fa-handshake"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Exclusive Partnership</h3>
+                    <p class="text-gray-600 text-sm leading-relaxed">A highly rewarding B2B model designed for educational consultants and coaching institutes.</p>
+                </div>
+
+                <div class="bg-white rounded-2xl p-8 border border-gray-100 hover:border-bosse-green shadow-sm hover:shadow-xl transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-green-50 text-bosse-green rounded-xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform group-hover:bg-bosse-green group-hover:text-white">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">High Revenue Potential</h3>
+                    <p class="text-gray-600 text-sm leading-relaxed">Maximize your growth and expand your educational services with excellent revenue sharing.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="process" class="py-20 bg-gray-50 border-t border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Simple Onboarding Process</h2>
+                <p class="text-lg text-gray-600">Become a recognized partner in 4 straightforward steps.</p>
+            </div>
+
+            <div class="relative">
+                <!-- Connecting Line (Desktop) -->
+                <div class="hidden md:block absolute top-1/2 left-0 w-full h-1 bg-blue-100 -translate-y-1/2 z-0"></div>
+                
+                <div class="grid md:grid-cols-4 gap-8 relative z-10">
+                    <!-- Step 1 -->
+                    <div class="text-center relative">
+                        <div class="w-16 h-16 mx-auto bg-white border-4 border-bosse-blue text-bosse-blue rounded-full flex items-center justify-center text-xl font-bold shadow-md mb-4 relative z-10">1</div>
+                        <h4 class="font-bold text-lg mb-2">Apply Online</h4>
+                        <p class="text-sm text-gray-500">Fill out our quick partnership application form to initiate the process.</p>
+                    </div>
+                    <!-- Step 2 -->
+                    <div class="text-center relative">
+                        <div class="w-16 h-16 mx-auto bg-white border-4 border-blue-300 text-blue-400 rounded-full flex items-center justify-center text-xl font-bold shadow-md mb-4 relative z-10">2</div>
+                        <h4 class="font-bold text-lg mb-2">Document Review</h4>
+                        <p class="text-sm text-gray-500">Our team reviews your institution's credentials and infrastructure details.</p>
+                    </div>
+                    <!-- Step 3 -->
+                    <div class="text-center relative">
+                        <div class="w-16 h-16 mx-auto bg-white border-4 border-blue-300 text-blue-400 rounded-full flex items-center justify-center text-xl font-bold shadow-md mb-4 relative z-10">3</div>
+                        <h4 class="font-bold text-lg mb-2">MOU & Agreement</h4>
+                        <p class="text-sm text-gray-500">Sign the official Memorandum of Understanding outlining our mutual growth.</p>
+                    </div>
+                    <!-- Step 4 -->
+                    <div class="text-center relative">
+                        <div class="w-16 h-16 mx-auto bg-bosse-green border-4 border-green-200 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-md mb-4 relative z-10"><i class="fa-solid fa-rocket"></i></div>
+                        <h4 class="font-bold text-lg mb-2">Launch Centre</h4>
+                        <p class="text-sm text-gray-500">Receive your official certificate, marketing kit, and start admissions!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-12">
+                <button onclick="toggleModal('applyModal')" class="px-8 py-3 bg-bosse-blue hover:bg-blue-900 text-white rounded-full font-bold shadow-md transition-colors">Start Step 1 Now</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="benefits" class="py-20 gradient-bg text-white relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+                
+                <!-- Why Partner List -->
+                <div>
+                    <h3 class="text-bosse-gold font-bold tracking-wide uppercase mb-2">The Advantage</h3>
+                    <h2 class="text-3xl md:text-4xl font-bold mb-8">Why Partner With Us?</h2>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-start gap-4">
+                            <div class="bg-white/10 p-3 rounded-lg mt-1 shrink-0">
+                                <i class="fa-solid fa-globe text-bosse-gold text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xl font-bold mb-1">Global Recognition</h4>
+                                <p class="text-blue-100 text-sm leading-relaxed">Our certifications are globally recognized, making them valid for higher education and government/private employment opportunities.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="bg-white/10 p-3 rounded-lg mt-1 shrink-0">
+                                <i class="fa-solid fa-headset text-bosse-gold text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xl font-bold mb-1">Complete Ecosystem Support</h4>
+                                <p class="text-blue-100 text-sm leading-relaxed">End-to-end operational support including marketing collateral, staff training, CRM portal access, and dedicated account managers.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="bg-white/10 p-3 rounded-lg mt-1 shrink-0">
+                                <i class="fa-solid fa-clipboard-check text-bosse-gold text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xl font-bold mb-1">Frictionless Operations</h4>
+                                <p class="text-blue-100 text-sm leading-relaxed">Streamlined, transparent digital admission and examination processes to save you time and reduce administrative overhead.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-10 pt-8 border-t border-white/20">
+                        <h4 class="font-bold text-lg mb-4">Who Should Apply?</h4>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-4 py-2 bg-white/10 rounded-full text-sm font-medium border border-white/20">Schools</span>
+                            <span class="px-4 py-2 bg-white/10 rounded-full text-sm font-medium border border-white/20">Tuition Centers</span>
+                            <span class="px-4 py-2 bg-white/10 rounded-full text-sm font-medium border border-white/20">Consultants</span>
+                            <span class="px-4 py-2 bg-white/10 rounded-full text-sm font-medium border border-white/20">Entrepreneurs</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROI Calculator Box -->
+                <div id="roi" class="bg-white text-gray-900 rounded-3xl p-8 md:p-10 shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-bosse-green rounded-bl-full opacity-5"></div>
+                    
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-2xl font-bold text-bosse-blue">Revenue Calculator</h3>
+                        <div class="p-2 bg-green-50 rounded-lg text-bosse-green"><i class="fa-solid fa-calculator"></i></div>
+                    </div>
+                    
+                    <p class="text-gray-500 text-sm mb-8">Estimate your potential yearly revenue share based on your projected student enrollments.</p>
+                    
+                    <div class="mb-8">
+                        <div class="flex justify-between mb-2">
+                            <label class="font-semibold text-gray-700">Estimated Students / Year</label>
+                            <span id="studentCount" class="font-bold text-bosse-blue text-xl">50</span>
+                        </div>
+                        <input type="range" id="studentSlider" min="10" max="500" value="50" class="w-full">
+                        <div class="flex justify-between mt-2 text-xs text-gray-400 font-medium">
+                            <span>10</span>
+                            <span>500+</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-xl p-6 border border-gray-100 text-center mb-6">
+                        <p class="text-sm text-gray-500 font-medium mb-1">Projected Annual Revenue</p>
+                        <h4 class="text-4xl font-extrabold text-bosse-green">₹<span id="revenueResult">5,00,000</span></h4>
+                        <p class="text-xs text-gray-400 mt-2">*Calculation based on avg. fees. Actuals may vary.</p>
+                    </div>
+                    
+                    <button onclick="toggleModal('applyModal')" class="w-full bg-bosse-blue text-white py-4 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-md">
+                        Claim Your Region Now
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Partner Success Stories</h2>
+                <p class="text-gray-600">Hear from institutions that have transformed their business with BOSSE.</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Story 1 -->
+                <div class="bg-gray-50 p-8 rounded-2xl border border-gray-100 relative">
+                    <i class="fa-solid fa-quote-right absolute top-6 right-6 text-4xl text-gray-200"></i>
+                    <div class="flex text-yellow-400 text-sm mb-4">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                    </div>
+                    <p class="text-gray-700 italic mb-6">"Partnering with BOSSE allowed us to offer recognized 10th and 12th certifications. Our enrollment doubled in just 6 months, and the portal makes admissions a breeze."</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center font-bold text-bosse-blue">RK</div>
+                        <div>
+                            <p class="font-bold text-gray-900 text-sm">Rahul K.</p>
+                            <p class="text-xs text-gray-500">Director, Excel Academy</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Story 2 -->
+                <div class="bg-gray-50 p-8 rounded-2xl border border-gray-100 relative">
+                    <i class="fa-solid fa-quote-right absolute top-6 right-6 text-4xl text-gray-200"></i>
+                    <div class="flex text-yellow-400 text-sm mb-4">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                    </div>
+                    <p class="text-gray-700 italic mb-6">"The B2B revenue sharing model is highly transparent. The support team at BOSSE Sikkim is always responsive, helping us resolve student queries instantly."</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center font-bold text-bosse-green">SM</div>
+                        <div>
+                            <p class="font-bold text-gray-900 text-sm">Sneha M.</p>
+                            <p class="text-xs text-gray-500">Educational Consultant</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Story 3 -->
+                <div class="bg-gray-50 p-8 rounded-2xl border border-gray-100 relative">
+                    <i class="fa-solid fa-quote-right absolute top-6 right-6 text-4xl text-gray-200"></i>
+                    <div class="flex text-yellow-400 text-sm mb-4">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                    </div>
+                    <p class="text-gray-700 italic mb-6">"We upgraded our coaching center to an Authorized Study Centre. The prestige of being associated with a recognized board has elevated our brand locally."</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center font-bold text-bosse-blue">VP</div>
+                        <div>
+                            <p class="font-bold text-gray-900 text-sm">Vikram P.</p>
+                            <p class="text-xs text-gray-500">Founder, Vidya Institute</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-20 bg-gray-50 border-t border-gray-100">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
+                <p class="text-gray-600">Got questions? We've got answers.</p>
+            </div>
+
+            <div class="space-y-4">
+                <!-- FAQ Item 1 -->
+                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                    <button class="w-full px-6 py-4 text-left font-semibold text-gray-900 flex justify-between items-center focus:outline-none" onclick="toggleAccordion(this)">
+                        <span>What is the initial investment required?</span>
+                        <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+                    </button>
+                    <div class="accordion-content bg-gray-50 border-t border-gray-100">
+                        <div class="px-6 py-4 text-gray-600 text-sm leading-relaxed">
+                            The initial setup fee is highly competitive and depends on the tier of partnership you choose (Basic Centre vs. Regional Franchise). We discuss full financials transparently during the introductory call.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- FAQ Item 2 -->
+                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                    <button class="w-full px-6 py-4 text-left font-semibold text-gray-900 flex justify-between items-center focus:outline-none" onclick="toggleAccordion(this)">
+                        <span>How long does the approval process take?</span>
+                        <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+                    </button>
+                    <div class="accordion-content bg-gray-50 border-t border-gray-100">
+                        <div class="px-6 py-4 text-gray-600 text-sm leading-relaxed">
+                            Once your online application is submitted along with necessary documents, our verification team typically processes and grants approval within 7 to 10 business days.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 3 -->
+                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                    <button class="w-full px-6 py-4 text-left font-semibold text-gray-900 flex justify-between items-center focus:outline-none" onclick="toggleAccordion(this)">
+                        <span>Are the certificates valid for Govt. jobs?</span>
+                        <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+                    </button>
+                    <div class="accordion-content bg-gray-50 border-t border-gray-100">
+                        <div class="px-6 py-4 text-gray-600 text-sm leading-relaxed">
+                            Yes. The Board of Open Schooling and Skill Education (BOSSE) is a legally established board. Its certifications are valid for higher education admissions and government/private employment across India.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pre-footer Lead Gen -->
+    <section class="bg-bosse-green py-12 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-white rounded-full mix-blend-overlay opacity-10 -translate-y-1/2 translate-x-1/2"></div>
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+            <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Want to review detailed margins & requirements?</h2>
+            <p class="text-green-100 mb-8 max-w-2xl mx-auto">Download our comprehensive 2026 Partnership Prospectus PDF directly to your inbox.</p>
+            
+            <form onsubmit="handleDownload(event)" class="flex flex-col sm:flex-row gap-3 justify-center max-w-xl mx-auto">
+                <input type="email" required placeholder="Enter your business email" class="flex-1 px-4 py-3 rounded-lg border-0 focus:ring-2 focus:ring-white bg-white/10 text-white placeholder-green-200 outline-none">
+                <button type="submit" class="px-6 py-3 bg-white text-bosse-green font-bold rounded-lg hover:bg-gray-100 transition-colors shadow-lg flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download"></i> Get Prospectus
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <footer class="bg-gray-900 text-white pt-20 pb-24 md:pb-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-12 border-b border-gray-800 pb-16">
+                <!-- Brand Col -->
+                <div class="lg:col-span-1">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-full bg-bosse-green flex items-center justify-center text-white font-bold shadow-md">
+                            <i class="fa-solid fa-tree"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white tracking-wide">BOSSE Sikkim</h2>
+                    </div>
+                    <p class="text-gray-400 mb-6 leading-relaxed text-sm">
+                        Empowering education through valid certifications and highly rewarding B2B partnerships. Let's build a brighter tomorrow together.
+                    </p>
+                </div>
+
+                <!-- Quick Links -->
+                <div>
+                    <h3 class="text-lg font-bold mb-6 text-white border-l-4 border-bosse-green pl-3">Quick Links</h3>
+                    <ul class="space-y-3 text-gray-400 text-sm">
+                        <li><a href="#" class="hover:text-bosse-green transition-colors"><i class="fa-solid fa-angle-right mr-2"></i> Home</a></li>
+                        <li><a href="#offerings" class="hover:text-bosse-green transition-colors"><i class="fa-solid fa-angle-right mr-2"></i> Partnership Programs</a></li>
+                        <li><a href="#process" class="hover:text-bosse-green transition-colors"><i class="fa-solid fa-angle-right mr-2"></i> How to Apply</a></li>
+                        <li><a href="#" onclick="toggleModal('loginModal')" class="hover:text-bosse-green transition-colors"><i class="fa-solid fa-angle-right mr-2"></i> Partner Portal Login</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact Info -->
+                <div>
+                    <h3 class="text-lg font-bold mb-6 text-white border-l-4 border-bosse-gold pl-3">Contact Admissions Cell</h3>
+                    <div class="space-y-4 text-gray-300 text-sm">
+                        <div class="flex items-start gap-3">
+                            <div class="text-bosse-green mt-1"><i class="fa-solid fa-phone-volume"></i></div>
+                            <div>
+                                <p class="font-medium">+91 9778469227</p>
+                                <p class="font-medium">+91 9288088809</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-bosse-green"><i class="fa-solid fa-envelope"></i></div>
+                            <a href="mailto:haseenabosse@gmail.com" class="hover:text-white transition-colors">haseenabosse@gmail.com</a>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-bosse-green"><i class="fa-solid fa-globe"></i></div>
+                            <a href="http://www.bosse.ac.in" target="_blank" class="hover:text-white transition-colors">www.bosse.ac.in</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8 text-center text-gray-500 text-xs flex flex-col md:flex-row justify-between items-center gap-4">
+                <p>&copy; 2026 Board of Open Schooling and Skill Education, Sikkim. B2B Landing Page.</p>
+            </div>
+        </div>
+    </footer>
+
+    
+    <!-- Mobile Sticky Bottom CTA -->
+    <div class="md:hidden fixed bottom-0 left-0 w-full bg-white shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1)] z-30 p-3 border-t border-gray-200 animate-slide-up">
+        <button onclick="toggleModal('applyModal')" class="w-full bg-bosse-green text-white py-3.5 rounded-xl font-bold shadow-md flex items-center justify-center gap-2">
+            Apply For Partnership <i class="fa-solid fa-bolt text-yellow-300"></i>
+        </button>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 z-50 hidden opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="toggleModal('loginModal')"></div>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0 z-10">
+            <div class="relative bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-md w-full border border-gray-100">
+                <button onclick="toggleModal('loginModal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors z-10">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+                <div class="bg-bosse-light px-8 py-6 border-b border-gray-100 text-center">
+                    <div class="inline-flex w-12 h-12 rounded-full bg-bosse-blue items-center justify-center text-white font-bold text-xl mb-3 shadow-inner">
+                        <i class="fa-solid fa-user-lock"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900">Partner Login</h3>
+                </div>
+                <div class="px-8 py-8">
+                    <form id="loginForm" onsubmit="handleLogin(event)">
+                        <div class="mb-5">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Centre Code / Email</label>
+                            <input type="text" required class="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bosse-blue focus:border-bosse-blue bg-gray-50 focus:bg-white transition-colors" placeholder="e.g. BSS-2026-X">
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <input type="password" required class="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bosse-blue focus:border-bosse-blue bg-gray-50 focus:bg-white transition-colors" placeholder="••••••••">
+                        </div>
+                        <button type="submit" class="w-full py-3 px-4 rounded-lg shadow-sm font-bold text-white bg-bosse-blue hover:bg-blue-900 transition-colors">
+                            Sign In
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Multi-Step Application Modal -->
+    <div id="applyModal" class="fixed inset-0 z-50 hidden opacity-0 transition-opacity duration-300 overflow-y-auto">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm fixed" onclick="toggleModal('applyModal')"></div>
+        <div class="flex items-center justify-center min-h-screen px-4 py-8 text-center sm:p-0 z-10 relative">
+            <div class="relative bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full border border-gray-100">
+                
+                <button onclick="toggleModal('applyModal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none z-10">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+
+                <!-- Progress Bar -->
+                <div class="bg-gray-50 px-8 py-6 border-b border-gray-100">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Partnership Application</h3>
+                    <div class="flex items-center justify-between relative">
+                        <div class="absolute left-0 top-1/2 w-full h-1 bg-gray-200 -z-10 -translate-y-1/2"></div>
+                        <div id="progressLine" class="absolute left-0 top-1/2 w-1/2 h-1 bg-bosse-green -z-10 -translate-y-1/2 transition-all duration-300"></div>
+                        
+                        <div class="w-8 h-8 rounded-full bg-bosse-green text-white flex items-center justify-center text-sm font-bold shadow-md">1</div>
+                        <div id="step2Indicator" class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-bold border border-gray-300 transition-colors duration-300">2</div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 mt-2 font-medium">
+                        <span>Basic Details</span>
+                        <span>Institution Info</span>
+                    </div>
+                </div>
+
+                <div class="px-8 py-6">
+                    <form id="applyForm" onsubmit="submitApplication(event)">
+                        
+                        <!-- Step 1: Basic Info -->
+                        <div id="formStep1" class="space-y-4 animate-fade-in">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                                <input type="text" id="appName" required class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bosse-green outline-none bg-gray-50 focus:bg-white">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                                    <input type="tel" id="appPhone" required class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bosse-green outline-none bg-gray-50 focus:bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                                    <input type="email" id="appEmail" required class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bosse-green outline-none bg-gray-50 focus:bg-white">
+                                </div>
+                            </div>
+                            <button type="button" onclick="nextStep()" class="w-full mt-4 py-3 bg-bosse-blue text-white rounded-lg font-bold hover:bg-blue-900 transition-colors">
+                                Next Step <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+
+                        <!-- Step 2: Institution Info (Hidden initially) -->
+                        <div id="formStep2" class="space-y-4 hidden animate-fade-in">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Institution/Company Name</label>
+                                <input type="text" id="appCompany" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bosse-green outline-none bg-gray-50 focus:bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">City/District *</label>
+                                <input type="text" id="appCity" required class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bosse-green outline-none bg-gray-50 focus:bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Current Student Base (Approx)</label>
+                                <select class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bosse-green outline-none bg-gray-50 focus:bg-white">
+                                    <option>New Setup (0 students)</option>
+                                    <option>1 - 50 students</option>
+                                    <option>51 - 200 students</option>
+                                    <option>200+ students</option>
+                                </select>
+                            </div>
+                            <div class="flex gap-3 mt-4">
+                                <button type="button" onclick="prevStep()" class="w-1/3 py-3 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition-colors">
+                                    Back
+                                </button>
+                                <button type="submit" id="submitAppBtn" class="w-2/3 py-3 bg-bosse-green text-white rounded-lg font-bold hover:bg-green-700 transition-colors shadow-md flex justify-center items-center gap-2">
+                                    Submit Application
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Toast Notification -->
+    <div id="toastMessage" class="fixed bottom-24 md:bottom-6 right-6 transform translate-y-20 opacity-0 transition-all duration-300 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl z-[60] flex items-center gap-4 pointer-events-none">
+        <div id="toastIcon" class="w-8 h-8 rounded-full bg-bosse-green flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-check text-white"></i>
+        </div>
+        <div>
+            <p id="toastTitle" class="font-bold text-sm">Success</p>
+            <p id="toastText" class="text-sm text-gray-300">Action completed.</p>
+        </div>
+    </div>
+
+    <script>
+        // --- Navigation ---
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        mobileMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+        });
+
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('nav');
+            nav.classList.toggle('shadow-md', window.scrollY > 10);
+        });
+
+        // --- Modals ---
+        function toggleModal(modalID) {
+            const modal = document.getElementById(modalID);
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                // reset application form if opening apply modal
+                if(modalID === 'applyModal') {
+                    document.getElementById('formStep1').classList.remove('hidden');
+                    document.getElementById('formStep2').classList.add('hidden');
+                    document.getElementById('progressLine').style.width = '50%';
+                    document.getElementById('step2Indicator').className = 'w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-bold border border-gray-300 transition-colors duration-300';
+                }
+                setTimeout(() => { modal.classList.remove('opacity-0'); modal.classList.add('opacity-100'); }, 10);
+            } else {
+                modal.classList.remove('opacity-100');
+                modal.classList.add('opacity-0');
+                setTimeout(() => { modal.classList.add('hidden'); }, 300);
+            }
+        }
+
+        // --- Toast System ---
+        function showToast(title, message, isError = false) {
+            const toast = document.getElementById('toastMessage');
+            document.getElementById('toastTitle').textContent = title;
+            document.getElementById('toastText').textContent = message;
+            
+            const icon = document.getElementById('toastIcon');
+            icon.className = isError 
+                ? "w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shrink-0" 
+                : "w-8 h-8 rounded-full bg-bosse-green flex items-center justify-center shrink-0";
+            icon.innerHTML = isError ? '<i class="fa-solid fa-triangle-exclamation text-white"></i>' : '<i class="fa-solid fa-check text-white"></i>';
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 4000);
+        }
+
+        // --- ROI Calculator ---
+        const slider = document.getElementById('studentSlider');
+        const countDisplay = document.getElementById('studentCount');
+        const revDisplay = document.getElementById('revenueResult');
+        const avgRevenuePerStudent = 10000; // Mock calculation metric
+
+        slider.addEventListener('input', function() {
+            const students = parseInt(this.value);
+            countDisplay.textContent = students;
+            // Format to Indian Numbering System
+            const revenue = (students * avgRevenuePerStudent).toLocaleString('en-IN');
+            revDisplay.textContent = revenue;
+        });
+
+        // --- Number Counter Animation ---
+        const counters = document.querySelectorAll('.counter');
+        const speed = 200; // lower is slower
+
+        const animateCounters = () => {
+            counters.forEach(counter => {
+                const updateCount = () => {
+                    const target = +counter.getAttribute('data-target');
+                    const count = +counter.innerText;
+                    const inc = target / speed;
+
+                    if (count < target) {
+                        counter.innerText = Math.ceil(count + inc);
+                        setTimeout(updateCount, 15);
+                    } else {
+                        counter.innerText = target;
+                    }
+                };
+                updateCount();
+            });
+        }
+        
+        // Trigger counters when scrolled into view
+        let animated = false;
+        window.addEventListener('scroll', () => {
+            const statsSection = document.querySelector('.counter').parentElement.parentElement;
+            const sectionPos = statsSection.getBoundingClientRect().top;
+            const screenPos = window.innerHeight;
+            
+            if(sectionPos < screenPos && !animated) {
+                animateCounters();
+                animated = true;
+            }
+        });
+
+        // --- Accordion FAQ ---
+        function toggleAccordion(btn) {
+            const content = btn.nextElementSibling;
+            const icon = btn.querySelector('i');
+            
+            // Close all others
+            document.querySelectorAll('.accordion-content').forEach(el => {
+                if(el !== content) {
+                    el.classList.remove('active');
+                    el.previousElementSibling.querySelector('i').style.transform = 'rotate(0deg)';
+                }
+            });
+
+            // Toggle current
+            if (content.classList.contains('active')) {
+                content.classList.remove('active');
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                content.classList.add('active');
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // --- Multi-Step Form Logic ---
+        function nextStep() {
+            // Basic validation check for step 1
+            const name = document.getElementById('appName').value;
+            const phone = document.getElementById('appPhone').value;
+            const email = document.getElementById('appEmail').value;
+            
+            if(!name || !phone || !email) {
+                showToast("Required Fields", "Please fill name, phone, and email.", true);
+                return;
+            }
+
+            document.getElementById('formStep1').classList.add('hidden');
+            document.getElementById('formStep2').classList.remove('hidden');
+            document.getElementById('progressLine').style.width = '100%';
+            
+            const step2Ind = document.getElementById('step2Indicator');
+            step2Ind.className = 'w-8 h-8 rounded-full bg-bosse-green text-white flex items-center justify-center text-sm font-bold shadow-md transition-colors duration-300';
+        }
+
+        function prevStep() {
+            document.getElementById('formStep2').classList.add('hidden');
+            document.getElementById('formStep1').classList.remove('hidden');
+            document.getElementById('progressLine').style.width = '50%';
+            document.getElementById('step2Indicator').className = 'w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-bold border border-gray-300 transition-colors duration-300';
+        }
+
+        function submitApplication(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitAppBtn');
+            const ogText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                btn.innerHTML = ogText;
+                btn.disabled = false;
+                toggleModal('applyModal');
+                showToast("Application Received", "Our team will contact you within 24 hours.");
+                e.target.reset();
+            }, 1500);
+        }
+
+        // --- Submissions ---
+        function handleLogin(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const ogText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
+            
+            setTimeout(() => {
+                btn.innerHTML = ogText;
+                toggleModal('loginModal');
+                showToast("Login Attempted", "Authentication request sent. (Demo UI)");
+                e.target.reset();
+            }, 1000);
+        }
+
+        function handleDownload(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const ogText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+            
+            setTimeout(() => {
+                btn.innerHTML = ogText;
+                showToast("Prospectus Sent", "Please check your email inbox.");
+                e.target.reset();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

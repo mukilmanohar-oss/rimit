@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { auth, type UserProfile } from '@/lib/api';
 import {
-  LoginForm, Sidebar, type View,
+  Sidebar, type View,
 } from '@/components/rimit-shell';
+import { LandingPage } from '@/components/views/landing-page';
 import { DashboardView } from '@/components/views/dashboard';
 import { UniversitiesView } from '@/components/views/universities';
 import { StudentsView } from '@/components/views/students';
@@ -58,7 +59,7 @@ export default function Home() {
   }
 
   if (!profile) {
-    return <LoginForm onLogin={setProfile} />;
+    return <LandingPage onLogin={setProfile} />;
   }
 
   return (
