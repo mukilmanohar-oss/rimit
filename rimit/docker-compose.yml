@@ -9,61 +9,74 @@ services:
     volumes:
       - ./:/app
     env_file: .env
-    depends_on: [db, redis, keycloak]
+    # depends_on: [db, redis, keycloak]
     ports:
       - '8000:8000'
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.dev
 
-  celery:
-    build: .
-    command: celery -A config worker -l info --concurrency=4
-    volumes:
-      - ./:/app
-    env_file: .env
-    depends_on: [redis, db]
-    environment:
-      DJANGO_SETTINGS_MODULE: config.settings.dev
-
-  celerybeat:
-    build: .
-    command: celery -A config beat -l info
-    volumes:
-      - ./:/app
-    env_file: .env
-    depends_on: [redis, db]
-    environment:
-      DJANGO_SETTINGS_MODULE: config.settings.dev
-
-  db:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: rimit
-      POSTGRES_USER: rimit
-      POSTGRES_PASSWORD: dev
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+  frontend:
+    build:
+      context: ../
+      dockerfile: Dockerfile.frontend
     ports:
-      - '5432:5432'
-
-  redis:
-    image: redis:7
-    ports:
-      - '6379:6379'
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:24.0
+      - '80:3000'
+    depends_on: [app]
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://db:5432/rimit
-      KC_DB_USERNAME: rimit
-      KC_DB_PASSWORD: dev
-    command: start-dev
-    ports:
-      - '8080:8080'
-    depends_on: [db]
+      - PORT=3000
+      - API_URL=http://app:8000
+    command: >
+      /bin/sh -c "sed -i 's|http://127.0.0.1:8000|http://app:8000|g' .next/routes-manifest.json && bun .next/standalone/server.js"
+
+#  celery:
+#    build: .
+#    command: celery -A config worker -l info --concurrency=4
+#    volumes:
+#      - ./:/app
+#    env_file: .env
+#    depends_on: [redis, db]
+#    environment:
+#      DJANGO_SETTINGS_MODULE: config.settings.dev
+#
+#  celerybeat:
+#    build: .
+#    command: celery -A config beat -l info
+#    volumes:
+#      - ./:/app
+#    env_file: .env
+#    depends_on: [redis, db]
+#    environment:
+#      DJANGO_SETTINGS_MODULE: config.settings.dev
+#
+#  db:
+#    image: postgres:16
+#    environment:
+#      POSTGRES_DB: rimit
+#      POSTGRES_USER: rimit
+#      POSTGRES_PASSWORD: dev
+#    volumes:
+#      - pgdata:/var/lib/postgresql/data
+#    ports:
+#      - '5432:5432'
+#
+#  redis:
+#    image: redis:7
+#    ports:
+#      - '6379:6379'
+#
+#  keycloak:
+#    image: quay.io/keycloak/keycloak:24.0
+#    environment:
+#      KEYCLOAK_ADMIN: admin
+#      KEYCLOAK_ADMIN_PASSWORD: admin
+#      KC_DB: postgres
+#      KC_DB_URL: jdbc:postgresql://db:5432/rimit
+#      KC_DB_USERNAME: rimit
+#      KC_DB_PASSWORD: dev
+#    command: start-dev
+#    ports:
+#      - '8080:8080'
+#    depends_on: [db]
 
   minio:
     image: minio/minio:latest

@@ -1,16 +1,33 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { aggregator, type University, type Course } from '@/lib/api';
-import { PageHeader, LoadingState, ErrorState, EmptyState } from '../rimit-shell';
+import { aggregator, type University, type Course, type UserProfile, type FeeStructure } from '@/lib/api';
+import { PageHeader, LoadingState, ErrorState, EmptyState, ConfirmDialog } from '../rimit-shell';
+import { usePermissions } from '@/lib/permissions';
 
-export function UniversitiesView() {
+import { toast } from 'sonner';
+
+export function UniversitiesView({ profile }: { profile: UserProfile }) {
   const [universities, setUniversities] = useState<University[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<University | null>(null);
   const [search, setSearch] = useState('');
   const [stateFilter, setStateFilter] = useState('');
+
+  // Add University form state
+  const [showAddUni, setShowAddUni] = useState(false);
+  const [editingUni, setEditingUni] = useState<University | null>(null);
+  const [uniForm, setUniForm] = useState({
+    name: '',
+    state: '',
+    accreditation: '',
+    description: '',
+    default_university_share_percent: '',
+  });
+  const [submittingUni, setSubmittingUni] = useState(false);
+
+  const { canCreate, canUpdate, canDelete } = usePermissions(profile.role, 'university');
 
   const load = async () => {
     setLoading(true);
@@ -30,18 +47,165 @@ export function UniversitiesView() {
 
   useEffect(() => { load(); }, []); // eslint-disable-line
 
+  const handleCreateUni = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingUni(true);
+    setError(null);
+    try {
+      if (editingUni) {
+        await aggregator.updateUniversity(editingUni.id, uniForm);
+        toast.success('University updated successfully');
+      } else {
+        await aggregator.createUniversity(uniForm);
+        toast.success('University created successfully');
+      }
+      setShowAddUni(false);
+      setEditingUni(null);
+      setUniForm({ name: '', state: '', accreditation: '', description: '', default_university_share_percent: '' });
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to ${editingUni ? 'update' : 'create'} university`);
+      toast.error(`Failed to ${editingUni ? 'update' : 'create'} university`);
+    } finally {
+      setSubmittingUni(false);
+    }
+  };
+
+  const handleEditClick = (u: University) => {
+    setEditingUni(u);
+    setUniForm({
+      name: u.name,
+      state: u.state,
+      accreditation: u.accreditation || '',
+      description: u.description || '',
+      default_university_share_percent: (u.default_university_share_percent ?? '').toString(),
+    });
+    setShowAddUni(true);
+  };
+
   if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} />;
+  if (error && !showAddUni) return <ErrorState message={error} />;
 
   if (selected) {
-    return <UniversityDetail university={selected} onBack={() => setSelected(null)} />;
+    return (
+      <UniversityDetail
+        university={selected}
+        profile={profile}
+        onBack={() => {
+          setSelected(null);
+          load();
+        }}
+      />
+    );
+  }
+
+  if (showAddUni) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-border overflow-hidden">
+          <div className="px-6 py-4 border-b border-border flex justify-between items-center">
+            <h3 className="font-semibold text-lg">{editingUni ? 'Edit University' : 'Add New University'}</h3>
+            <button onClick={() => { setShowAddUni(false); setEditingUni(null); }} className="text-muted-foreground hover:text-foreground">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+          <form onSubmit={handleCreateUni} className="p-6 space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">University Name *</label>
+              <input
+                type="text"
+                value={uniForm.name}
+                onChange={e => setUniForm(prev => ({ ...prev, name: e.target.value }))}
+                required
+                className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">State *</label>
+                <input
+                  type="text"
+                  value={uniForm.state}
+                  onChange={e => setUniForm(prev => ({ ...prev, state: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Accreditation</label>
+                <input
+                  type="text"
+                  value={uniForm.accreditation}
+                  onChange={e => setUniForm(prev => ({ ...prev, accreditation: e.target.value }))}
+                  placeholder="E.g., NAAC A++"
+                  className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Description</label>
+              <textarea
+                value={uniForm.description}
+                onChange={e => setUniForm(prev => ({ ...prev, description: e.target.value }))}
+                rows={3}
+                className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Default University Share % (of Total Fee)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={uniForm.default_university_share_percent}
+                onChange={e => setUniForm(prev => ({ ...prev, default_university_share_percent: e.target.value }))}
+                placeholder="E.g., 50.00"
+                className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">University’s default share of Total Fee (0–100%). Courses may override.</p>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => { setShowAddUni(false); setEditingUni(null); }}
+                className="px-4 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submittingUni || !uniForm.name || !uniForm.state}
+                className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {submittingUni ? 'Saving...' : editingUni ? 'Update' : 'Create'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div>
       <PageHeader
-        title="University Directory"
-        subtitle="Browse partner universities across India"
+        title="Universities"
+        subtitle="Manage academic partners and course providers"
+        action={
+          canCreate && (
+            <button
+              onClick={() => {
+                setEditingUni(null);
+                setUniForm({ name: '', state: '', accreditation: '', description: '' });
+                setShowAddUni(true);
+              }}
+              className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90"
+            >
+              + Add University
+            </button>
+          )
+        }
       />
 
       {/* Filters */}
@@ -73,29 +237,38 @@ export function UniversitiesView() {
       {universities.length === 0 ? (
         <EmptyState message="No universities found" />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {universities.map(u => (
-            <button
+            <div
               key={u.id}
-              onClick={() => setSelected(u)}
-              className="text-left bg-card border border-border rounded-lg p-5 hover:border-primary hover:shadow-sm transition"
+              className="bg-card rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md hover:border-primary/50 relative border-border"
             >
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-foreground">{u.name}</h3>
-                {u.accreditation && (
-                  <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">
-                    {u.accreditation}
+              <div onClick={() => setSelected(u)}>
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="font-semibold text-lg text-foreground pr-8 leading-tight">{u.name}</h3>
+                  <span className="text-xs bg-muted px-2 py-1 rounded text-muted-foreground whitespace-nowrap">
+                    {u.state}
                   </span>
+                </div>
+                {u.accreditation && (
+                  <div className="text-xs text-muted-foreground mb-3 font-medium bg-muted/50 inline-block px-2 py-0.5 rounded">
+                    {u.accreditation}
+                  </div>
+                )}
+                {u.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2">{u.description}</p>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground mb-3">{u.state}</p>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">
-                  {u.course_count ?? 0} courses
-                </span>
-                <span className="text-primary font-medium">View →</span>
-              </div>
-            </button>
+              {canUpdate ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleEditClick(u); }}
+                  className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                  title="Edit University"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                </button>
+              ) : null}
+            </div>
           ))}
         </div>
       )}
@@ -103,42 +276,258 @@ export function UniversitiesView() {
   );
 }
 
-function UniversityDetail({ university, onBack }: { university: University; onBack: () => void }) {
+function UniversityDetail({ university, profile, onBack }: { university: University; profile: UserProfile; onBack: () => void }) {
   const [detail, setDetail] = useState<University | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const d = await aggregator.getUniversity(university.id);
-        setDetail(d);
-      } catch (e) {
-        setDetail(university);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [university.id]);
+  // Add Course form state
+  const [showAddCourse, setShowAddCourse] = useState(false);
+  const [courseForm, setCourseForm] = useState({
+    name: '',
+    stream: 'Undergraduate',
+    duration_months: 36,
+    eligibility_text: '',
+    university_share_percent: '',
+  });
+  const [submittingCourse, setSubmittingCourse] = useState(false);
+
+  // Add Fee form state
+  const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
+  const [feeForm, setFeeForm] = useState({
+    fee_type: 'tuition',
+    amount: '',
+  });
+  const [submittingFee, setSubmittingFee] = useState(false);
+
+  const [uniToDelete, setUniToDelete] = useState<boolean>(false);
+  const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
+  const [feeToDelete, setFeeToDelete] = useState<string | null>(null);
+
+  const { canCreate, canUpdate, canDelete } = usePermissions(profile.role, 'course');
+
+  const loadDetail = async () => {
+    setLoading(true);
+    try {
+      const d = await aggregator.getUniversity(university.id);
+      setDetail(d);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadDetail(); }, [university.id]); // eslint-disable-line
+
+  const handleDeleteUni = async () => {
+    try {
+      await aggregator.deleteUniversity(university.id);
+      onBack();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete university');
+    }
+  };
+
+  const handleCreateCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingCourse(true);
+    setError(null);
+    try {
+      await aggregator.createCourse({
+        university: university.id,
+        name: courseForm.name,
+        stream: courseForm.stream,
+        duration_months: Number(courseForm.duration_months),
+        eligibility_text: courseForm.eligibility_text,
+        university_share_percent: courseForm.university_share_percent ? Number(courseForm.university_share_percent) : undefined,
+        is_active: true,
+      });
+      setCourseForm({ name: '', stream: 'Undergraduate', duration_months: 36, eligibility_text: '', university_share_percent: '' });
+      setShowAddCourse(false);
+      loadDetail();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create course');
+    } finally {
+      setSubmittingCourse(false);
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    try {
+      await aggregator.deleteCourse(courseId);
+      loadDetail();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete course');
+    }
+  };
+
+  const handleCreateFee = async (e: React.FormEvent, courseId: string) => {
+    e.preventDefault();
+    setSubmittingFee(true);
+    setError(null);
+    try {
+      await aggregator.createFee({
+        course: courseId,
+        fee_type: feeForm.fee_type,
+        amount: feeForm.amount,
+        currency: 'INR',
+        is_active: true,
+      });
+      setFeeForm({ fee_type: 'tuition', amount: '' });
+      setActiveCourseId(null);
+      loadDetail();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create fee structure');
+    } finally {
+      setSubmittingFee(false);
+    }
+  };
+
+  const handleDeleteFee = async (feeId: string) => {
+    try {
+      await aggregator.deleteFee(feeId);
+      loadDetail();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete fee item');
+    }
+  };
 
   if (loading || !detail) return <LoadingState />;
 
   return (
     <div>
-      <button onClick={onBack} className="text-sm text-primary mb-4 hover:underline">
-        ← Back to universities
-      </button>
-      <PageHeader title={detail.name} subtitle={`${detail.state} · ${detail.accreditation || 'Not accredited'}`} />
+      <div className="flex justify-end items-center mb-4">
+        {canDelete && (
+          <button
+            onClick={() => setUniToDelete(true)}
+            className="bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive hover:text-destructive-foreground px-3 py-1.5 rounded text-xs font-semibold"
+          >
+            Delete University
+          </button>
+        )}
+      </div>
+
+        <PageHeader 
+          title={detail.name} 
+          subtitle={`${detail.state} · ${detail.accreditation || 'Not accredited'}`} 
+          breadcrumbs={[{ label: 'Universities', onClick: onBack }, { label: detail.name }]}
+        />
+
+        {error && (
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-md mb-4">
+          {error}
+        </div>
+      )}
 
       {detail.description && <p className="text-sm text-muted-foreground mb-6">{detail.description}</p>}
 
-      <h2 className="text-lg font-semibold mb-3">Courses ({detail.courses?.length ?? 0})</h2>
+      {/* Add Course Overlay */}
+      {showAddCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card border border-border w-full max-w-sm rounded-lg shadow-lg p-6 space-y-4">
+            <h3 className="text-base font-bold text-foreground">Add Course to {detail.name}</h3>
+            <form onSubmit={handleCreateCourse} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Course Name *</label>
+                <input
+                  type="text"
+                  value={courseForm.name}
+                  onChange={e => setCourseForm(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                  placeholder="E.g., Bachelor of Technology"
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Stream *</label>
+                  <select
+                    value={courseForm.stream}
+                    onChange={e => setCourseForm(prev => ({ ...prev, stream: e.target.value }))}
+                    required
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none"
+                  >
+                    <option value="Undergraduate">Undergraduate</option>
+                    <option value="Postgraduate">Postgraduate</option>
+                    <option value="Diploma">Diploma</option>
+                    <option value="Open Schooling">Open Schooling</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Duration (Months) *</label>
+                  <input
+                    type="number"
+                    value={courseForm.duration_months}
+                    onChange={e => setCourseForm(prev => ({ ...prev, duration_months: Number(e.target.value) }))}
+                    required
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Eligibility Text</label>
+                <input
+                  type="text"
+                  value={courseForm.eligibility_text}
+                  onChange={e => setCourseForm(prev => ({ ...prev, eligibility_text: e.target.value }))}
+                  placeholder="10+2 with Physics, Chem, Math"
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">University Share % Override</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={courseForm.university_share_percent}
+                  onChange={e => setCourseForm(prev => ({ ...prev, university_share_percent: e.target.value }))}
+                  placeholder="Leave blank to inherit university default"
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                />
+              </div>
+              <div className="flex gap-2 pt-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCourse(false)}
+                  className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingCourse}
+                  className="bg-primary text-primary-foreground rounded-md px-4 py-1.5 text-xs font-medium hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {submittingCourse ? 'Adding...' : 'Add Course'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="text-lg font-semibold">Courses ({detail.courses?.length ?? 0})</h2>
+        {canCreate && (
+          <button
+            onClick={() => setShowAddCourse(true)}
+            className="text-xs bg-primary text-primary-foreground rounded-md px-3 py-1.5 font-medium hover:bg-primary/90"
+          >
+            + Add Course
+          </button>
+        )}
+      </div>
+
       {detail.courses && detail.courses.length > 0 ? (
-        <div className="space-y-3 mb-8">
+        <div className="space-y-4 mb-8">
           {detail.courses.map(c => (
-            <div key={c.id} className="bg-card border border-border rounded-lg p-4">
+            <div key={c.id} className="bg-card border border-border rounded-lg p-5">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="font-medium text-foreground">{c.name}</h3>
+                  <h3 className="font-semibold text-foreground text-sm">{c.name}</h3>
                   <p className="text-xs text-muted-foreground mt-1">
                     {c.stream} · {c.duration_months} months
                   </p>
@@ -146,16 +535,93 @@ function UniversityDetail({ university, onBack }: { university: University; onBa
                     <p className="text-xs text-muted-foreground mt-1">Eligibility: {c.eligibility_text}</p>
                   )}
                 </div>
-                {c.fees && c.fees.length > 0 && (
-                  <div className="text-right">
-                    {c.fees.map(f => (
-                      <p key={f.id} className="text-sm">
-                        <span className="text-muted-foreground">{f.fee_type}:</span>{' '}
-                        <span className="font-medium">₹{parseFloat(f.amount).toLocaleString('en-IN')}</span>
-                      </p>
-                    ))}
-                  </div>
-                )}
+
+                <div className="text-right space-y-2">
+                  {c.fees && c.fees.length > 0 ? (
+                    <div className="space-y-1">
+                      {c.fees.map(f => (
+                        <div key={f.id} className="text-xs flex items-center justify-end gap-2">
+                          <span className="text-muted-foreground">{f.fee_type}:</span>{' '}
+                          <span className="font-semibold text-foreground">₹{parseFloat(f.amount).toLocaleString('en-IN')}</span>
+                          {canCreate && (
+                            <button
+                              onClick={() => setFeeToDelete(f.id)}
+                              className="text-destructive hover:underline font-bold"
+                              title="Delete Fee Item"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No fees configured</p>
+                  )}
+
+                  {canDelete && (
+                    <div className="flex gap-2 justify-end">
+                      {activeCourseId === c.id ? (
+                        <form onSubmit={(e) => handleCreateFee(e, c.id)} className="bg-muted p-2 rounded-md space-y-2 text-left w-48">
+                          <select
+                            value={feeForm.fee_type}
+                            onChange={e => setFeeForm(prev => ({ ...prev, fee_type: e.target.value }))}
+                            required
+                            className="w-full px-2 py-1 text-xs border rounded bg-background focus:outline-none"
+                          >
+                            <option value="admission">Admission Fee</option>
+                            <option value="tuition">Tuition Fee</option>
+                            <option value="exam">Examination Fee</option>
+                            <option value="library">Library Fee</option>
+                            <option value="lab">Lab Fee</option>
+                            <option value="other">Other</option>
+                          </select>
+                          <input
+                            type="number"
+                            required
+                            placeholder="Amount (₹)"
+                            value={feeForm.amount}
+                            onChange={e => setFeeForm(prev => ({ ...prev, amount: e.target.value }))}
+                            className="w-full px-2 py-1 text-xs border rounded bg-background"
+                          />
+                          <div className="flex gap-1 justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setActiveCourseId(null)}
+                              className="text-[10px] border px-2 py-0.5 rounded bg-background"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={submittingFee}
+                              className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setActiveCourseId(c.id);
+                            setFeeForm({ fee_type: '', amount: '' });
+                          }}
+                          className="text-[11px] text-primary hover:underline font-semibold"
+                        >
+                          + Add Fee
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => setCourseToDelete(c.id)}
+                        className="text-[11px] text-destructive hover:underline font-semibold ml-2"
+                      >
+                        Delete Course
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -188,6 +654,32 @@ function UniversityDetail({ university, onBack }: { university: University; onBa
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={uniToDelete}
+        onOpenChange={setUniToDelete}
+        title="Delete University?"
+        description="Are you sure you want to delete this university? All courses and fees linked to it will also be deleted."
+        onConfirm={handleDeleteUni}
+        confirmText="Delete"
+      />
+      <ConfirmDialog
+        open={!!courseToDelete}
+        onOpenChange={(open) => !open && setCourseToDelete(null)}
+        title="Delete Course?"
+        description="Are you sure you want to delete this course?"
+        onConfirm={() => { if (courseToDelete) handleDeleteCourse(courseToDelete); }}
+        confirmText="Delete"
+      />
+      <ConfirmDialog
+        open={!!feeToDelete}
+        onOpenChange={(open) => !open && setFeeToDelete(null)}
+        title="Delete Fee?"
+        description="Are you sure you want to delete this fee item?"
+        onConfirm={() => { if (feeToDelete) handleDeleteFee(feeToDelete); }}
+        confirmText="Delete"
+      />
     </div>
   );
 }
+

@@ -29,7 +29,7 @@ class TestAuditLog(BaseAPITestCase):
     def test_post_request_creates_audit_log(self):
         """Creating a university via API logs an entry."""
         client = self.super_admin_client()
-        resp = client.post('/api/v1/universities/', json.dumps({
+        resp = client.post('/api/v1/universities', json.dumps({
             'name': 'Audit Test University',
             'state': 'Kerala',
         }), content_type='application/json')
@@ -44,7 +44,7 @@ class TestAuditLog(BaseAPITestCase):
         """GET requests are not audit-logged."""
         UniversityFactory()
         client = self.academic_head_client()
-        client.get('/api/v1/universities/')
+        client.get('/api/v1/universities')
         # No 'get' entries should exist
         assert AuditLog.objects.filter(action_type='get').count() == 0
 
@@ -73,7 +73,7 @@ class TestFinanceAPI(BaseAPITestCase):
         self._setup_payment(self.center_b, amount=30000)
 
         client = self.finance_client(sub_center=self.center_a)
-        resp = client.get('/api/v1/payments/')
+        resp = client.get('/api/v1/payments')
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data['count'] == 1  # Only own center (RLS)
 
@@ -82,12 +82,12 @@ class TestFinanceAPI(BaseAPITestCase):
         self._setup_payment(self.center_b, amount=30000)
 
         client = self.super_admin_client()
-        resp = client.get('/api/v1/payments/')
+        resp = client.get('/api/v1/payments')
         assert resp.data['count'] == 2
 
     def test_counselor_cannot_view_payments(self):
         client = self.counselor_client()
-        resp = client.get('/api/v1/payments/')
+        resp = client.get('/api/v1/payments')
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
     def test_summary_endpoint(self):
@@ -96,7 +96,7 @@ class TestFinanceAPI(BaseAPITestCase):
         self._setup_payment(self.center_a, amount=30000, status='pending')
 
         client = self.finance_client(sub_center=self.center_a)
-        resp = client.get('/api/v1/payments/summary/')
+        resp = client.get('/api/v1/payments/summary')
         assert resp.status_code == status.HTTP_200_OK
         assert float(resp.data['total_collected']) == 50000.0
         assert float(resp.data['total_pending']) == 30000.0
@@ -109,13 +109,13 @@ class TestFinanceAPI(BaseAPITestCase):
 
         # Super admin can see breakdown
         client = self.super_admin_client()
-        resp = client.get('/api/v1/payments/by_sub_center/')
+        resp = client.get('/api/v1/payments/by_sub_center')
         assert resp.status_code == status.HTTP_200_OK
         assert len(resp.data) == 2
 
         # Finance at center_a cannot see cross-center breakdown
         client = self.finance_client(sub_center=self.center_a)
-        resp = client.get('/api/v1/payments/by_sub_center/')
+        resp = client.get('/api/v1/payments/by_sub_center')
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -131,13 +131,13 @@ class TestAuthEndpoints(BaseAPITestCase):
 
         from rest_framework.test import APIClient
         client = APIClient()
-        resp = client.post('/api/v1/auth/token/', {'username': 'authtest', 'password': 'pass123'})
+        resp = client.post('/api/v1/auth/token', {'username': 'authtest', 'password': 'pass123'})
         assert resp.status_code == status.HTTP_200_OK
         assert 'token' in resp.data
 
     def test_profile_endpoint_returns_role_and_tenant(self):
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.get('/api/v1/auth/profile/')
+        resp = client.get('/api/v1/auth/profile')
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data['role'] == 'counselor'
         assert resp.data['sub_center_id'] == str(self.center_a.id)
@@ -145,14 +145,14 @@ class TestAuthEndpoints(BaseAPITestCase):
 
     def test_mfa_verify_accepts_6_digit_otp(self):
         client = self.counselor_client()
-        resp = client.post('/api/v1/auth/mfa/verify/', json.dumps({'otp': '123456'}),
+        resp = client.post('/api/v1/auth/mfa/verify', json.dumps({'otp': '123456'}),
                            content_type='application/json')
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data['status'] == 'verified'
 
     def test_mfa_verify_rejects_invalid_otp(self):
         client = self.counselor_client()
-        resp = client.post('/api/v1/auth/mfa/verify/', json.dumps({'otp': 'abc'}),
+        resp = client.post('/api/v1/auth/mfa/verify', json.dumps({'otp': 'abc'}),
                            content_type='application/json')
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -169,20 +169,20 @@ class TestRBACMatrix(BaseAPITestCase):
     def test_super_admin_full_access(self):
         """Super Admin can access all endpoints."""
         client = self.super_admin_client()
-        for endpoint in ['/api/v1/universities/', '/api/v1/students/',
-                         '/api/v1/enrollments/', '/api/v1/intake-sessions/',
-                         '/api/v1/rules/session-matrix/', '/api/v1/payments/',
-                         '/api/v1/notifications/logs/']:
+        for endpoint in ['/api/v1/universities', '/api/v1/students',
+                         '/api/v1/enrollments', '/api/v1/intake-sessions',
+                         '/api/v1/rules/session-matrix', '/api/v1/payments',
+                         '/api/v1/notifications/logs']:
             resp = client.get(endpoint)
             assert resp.status_code in (200, 403), f'{endpoint}: {resp.status_code}'
 
     def test_academic_head_read_all(self):
         """Academic Head can read across all tenants."""
         client = self.academic_head_client()
-        resp = client.get('/api/v1/students/')
+        resp = client.get('/api/v1/students')
         assert resp.status_code == status.HTTP_200_OK
         # But cannot write to rules (super_admin only)
-        resp = client.post('/api/v1/rules/session-matrix/', json.dumps({
+        resp = client.post('/api/v1/rules/session-matrix', json.dumps({
             'rule_name': 'unauthorized', 'conditions': {},
         }), content_type='application/json')
         assert resp.status_code == status.HTTP_403_FORBIDDEN
@@ -192,31 +192,31 @@ class TestRBACMatrix(BaseAPITestCase):
         client = self.counselor_client(sub_center=self.center_a)
         # Can create students in own center
         # Cannot access finance
-        resp = client.get('/api/v1/payments/')
+        resp = client.get('/api/v1/payments')
         assert resp.status_code == status.HTTP_403_FORBIDDEN
         # Cannot access rules config
-        resp = client.get('/api/v1/rules/session-matrix/')
+        resp = client.get('/api/v1/rules/session-matrix')
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
     def test_finance_tenant_scoped_no_student_write(self):
         """Finance can read students but not create them."""
         client = self.finance_client(sub_center=self.center_a)
         # Can read students (for payment context)
-        resp = client.get('/api/v1/students/')
+        resp = client.get('/api/v1/students')
         assert resp.status_code == status.HTTP_200_OK
         # Cannot create students (counselor only)
-        resp = client.post('/api/v1/students/', json.dumps({
+        resp = client.post('/api/v1/students', json.dumps({
             'full_name': 'X', 'dob': '2000-01-01',
             'primary_phone': '+919876543210', 'aadhar_number': '123456789012',
         }), content_type='application/json')
         assert resp.status_code == status.HTTP_403_FORBIDDEN
         # Can read payments
-        resp = client.get('/api/v1/payments/')
+        resp = client.get('/api/v1/payments')
         assert resp.status_code == status.HTTP_200_OK
 
     def test_unauthenticated_denied(self):
         """No token = 401."""
         from rest_framework.test import APIClient
         client = APIClient()
-        resp = client.get('/api/v1/students/')
+        resp = client.get('/api/v1/students')
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED

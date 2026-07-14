@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.common.permissions import IsSuperAdmin, IsSuperAdminOrReadOnly, IsCounselorOrAbove
+from apps.common.rbac import ResourcePermission
 from apps.rules.models import IntakeSession, RulesConfiguration
 from apps.rules.serializers import (
     IntakeSessionSerializer, RulesConfigurationSerializer, EnrollmentValidationSerializer,
@@ -13,7 +14,8 @@ from apps.rules.serializers import (
 class IntakeSessionViewSet(viewsets.ModelViewSet):
     queryset = IntakeSession.objects.all()
     serializer_class = IntakeSessionSerializer
-    permission_classes = [IsSuperAdminOrReadOnly]
+    resource_name = 'intake_session'
+    permission_classes = [ResourcePermission]
     filterset_fields = ['is_active']
     ordering_fields = ['start_date', 'session_name']
     search_fields = ['session_name']
@@ -23,7 +25,8 @@ class RulesConfigurationViewSet(viewsets.ModelViewSet):
     """Session Enforcement Matrix rules — Super Admin only."""
     queryset = RulesConfiguration.objects.all()
     serializer_class = RulesConfigurationSerializer
-    permission_classes = [IsSuperAdmin]
+    resource_name = 'rules_config'
+    permission_classes = [ResourcePermission]
     filterset_fields = ['is_active']
     ordering_fields = ['priority', 'rule_name']
     search_fields = ['rule_name', 'description']

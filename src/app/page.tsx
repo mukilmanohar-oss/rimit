@@ -11,6 +11,16 @@ import { StudentsView } from '@/components/views/students';
 import { EnrollmentsView } from '@/components/views/enrollments';
 import { SessionsView } from '@/components/views/sessions';
 import { PaymentsView } from '@/components/views/payments';
+import { SubCentersView } from '@/components/views/sub-centers';
+import { UsersView } from '@/components/views/users';
+import { TicketsView } from '@/components/views/tickets';
+import { NotificationLogsView } from '@/components/views/notification-logs';
+import { ProspectusView } from '@/components/views/prospectus';
+import { CourseSearchView } from '@/components/views/course-search';
+import { LeadMonitorView } from '@/components/views/lead-monitor';
+import { CheckoutView } from '@/components/views/checkout';
+import { LeadsCreateView } from '@/components/views/leads-create';
+import { LeadsView } from '@/components/views/leads';
 
 export default function Home() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -56,11 +66,21 @@ export default function Home() {
       <Sidebar profile={profile} view={view} setView={setView} onLogout={handleLogout} />
       <main className="flex-1 p-8 overflow-x-hidden">
         {view === 'dashboard' && <DashboardView profile={profile} />}
-        {view === 'universities' && <UniversitiesView />}
+        {view === 'universities' && <UniversitiesView profile={profile} />}
         {view === 'students' && <StudentsView profile={profile} />}
         {view === 'enrollments' && <EnrollmentsView profile={profile} />}
         {view === 'sessions' && <SessionsView profile={profile} />}
         {view === 'payments' && <PaymentsView profile={profile} />}
+        {view === 'subcenters' && <SubCentersView profile={profile} />}
+        {view === 'users' && <UsersView profile={profile} />}
+        {view === 'tickets' && <TicketsView profile={profile} />}
+        {view === 'prospectus' && <ProspectusView profile={profile} />}
+        {view === 'course-search' && <CourseSearchView profile={profile} />}
+        {view === 'lead-monitor' && <LeadMonitorView profile={profile} />}
+        {view === 'notification-logs' && <NotificationLogsView profile={profile} />}
+        {view === 'checkout' && <CheckoutView profile={profile} />}
+        {view === 'leads-create' && <LeadsCreateView profile={profile} />}
+        {view === 'leads' && <LeadsView profile={profile} />}
       </main>
     </div>
   );

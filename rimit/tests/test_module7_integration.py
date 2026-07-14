@@ -43,7 +43,7 @@ class TestEndToEndEnrollmentLifecycle(BaseAPITestCase):
     def test_full_lifecycle(self):
         # === Step 1: Super Admin sets up catalog ===
         sa_client = self.super_admin_client()
-        resp = sa_client.post('/api/v1/universities/', json.dumps({
+        resp = sa_client.post('/api/v1/universities', json.dumps({
             'name': 'Mangalayatan University',
             'state': 'Uttar Pradesh',
             'accreditation': 'NAAC A',
@@ -51,7 +51,7 @@ class TestEndToEndEnrollmentLifecycle(BaseAPITestCase):
         assert resp.status_code == 201
         university_id = resp.data['id']
 
-        resp = sa_client.post('/api/v1/courses/', json.dumps({
+        resp = sa_client.post('/api/v1/courses', json.dumps({
             'university': str(university_id),
             'name': 'BCA Online',
             'stream': 'Undergraduate',
@@ -61,7 +61,7 @@ class TestEndToEndEnrollmentLifecycle(BaseAPITestCase):
         assert resp.status_code == 201
         course_id = resp.data['id']
 
-        resp = sa_client.post('/api/v1/intake-sessions/', json.dumps({
+        resp = sa_client.post('/api/v1/intake-sessions', json.dumps({
             'session_name': 'October 2026',
             'start_date': '2026-10-01',
             'is_active': True,
@@ -72,7 +72,7 @@ class TestEndToEndEnrollmentLifecycle(BaseAPITestCase):
 
         # === Step 2: Counselor registers student ===
         coun_client = self.counselor_client(sub_center=self.center_a)
-        resp = coun_client.post('/api/v1/students/', json.dumps({
+        resp = coun_client.post('/api/v1/students', json.dumps({
             'full_name': 'Rahul Sharma',
             'dob': '2000-05-15',
             'gender': 'M',
@@ -85,7 +85,7 @@ class TestEndToEndEnrollmentLifecycle(BaseAPITestCase):
         student_id = resp.data['id']
 
         # === Step 3: Document upload ===
-        resp = coun_client.post('/api/v1/students-docs/', json.dumps({
+        resp = coun_client.post('/api/v1/students-docs', json.dumps({
             'student': str(student_id),
             'doc_category': 'identity',
             'title': 'Aadhar Card',
@@ -96,11 +96,11 @@ class TestEndToEndEnrollmentLifecycle(BaseAPITestCase):
 
         # === Step 4: Academic Head verifies ===
         ah_client = self.academic_head_client()
-        resp = ah_client.post(f'/api/v1/students-docs/{doc_id}/verify/')
+        resp = ah_client.post(f'/api/v1/students-docs/{doc_id}/verify')
         assert resp.status_code == 200
 
         # === Step 5: Create enrollment ===
-        resp = coun_client.post('/api/v1/enrollments/', json.dumps({
+        resp = coun_client.post('/api/v1/enrollments', json.dumps({
             'student': str(student_id),
             'course': str(course_id),
             'session': str(session_id),
@@ -110,14 +110,14 @@ class TestEndToEndEnrollmentLifecycle(BaseAPITestCase):
 
         # === Step 6: Status transitions ===
         # Applied → Document Verified
-        resp = coun_client.patch(f'/api/v1/enrollments/{enrollment_id}/status/',
-                                 json.dumps({'status': 'Document Verified'}),
+        resp = coun_client.patch(f'/api/v1/enrollments/{enrollment_id}/status',
+                     json.dumps({'status': 'Document Verified'}),
                                  content_type='application/json')
         assert resp.status_code == 200
 
         # Document Verified → Fee Pending
-        resp = coun_client.patch(f'/api/v1/enrollments/{enrollment_id}/status/',
-                                 json.dumps({'status': 'Fee Pending'}),
+        resp = coun_client.patch(f'/api/v1/enrollments/{enrollment_id}/status',
+                     json.dumps({'status': 'Fee Pending'}),
                                  content_type='application/json')
         assert resp.status_code == 200
 

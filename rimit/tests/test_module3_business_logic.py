@@ -41,7 +41,7 @@ class TestIntakeSessionAPI(BaseAPITestCase):
 
     def test_super_admin_can_create_session(self):
         client = self.super_admin_client()
-        resp = client.post('/api/v1/intake-sessions/', {
+        resp = client.post('/api/v1/intake-sessions', {
             'session_name': 'July 2026',
             'start_date': '2026-07-01',
             'end_date': '2026-08-31',
@@ -52,7 +52,7 @@ class TestIntakeSessionAPI(BaseAPITestCase):
 
     def test_counselor_cannot_create_session(self):
         client = self.counselor_client()
-        resp = client.post('/api/v1/intake-sessions/', {
+        resp = client.post('/api/v1/intake-sessions', {
             'session_name': 'Forbidden',
             'start_date': '2026-07-01',
         })
@@ -62,7 +62,7 @@ class TestIntakeSessionAPI(BaseAPITestCase):
         IntakeSessionFactory(session_name='Past', is_active=False)
         IntakeSessionFactory(session_name='Active', is_active=True)
         client = self.counselor_client()
-        resp = client.get('/api/v1/intake-sessions/?is_active=True')
+        resp = client.get('/api/v1/intake-sessions?is_active=True')
         assert resp.data['count'] >= 1
         assert all(s['is_active'] for s in resp.data['results'])
 
@@ -72,7 +72,7 @@ class TestRulesConfigurationAPI(BaseAPITestCase):
 
     def test_super_admin_can_create_rule(self):
         client = self.super_admin_client()
-        resp = client.post('/api/v1/rules/session-matrix/', json.dumps({
+        resp = client.post('/api/v1/rules/session-matrix', json.dumps({
             'rule_name': 'block_fresh_july',
             'description': 'Fresh candidates cannot enroll in July',
             'conditions': {
@@ -89,7 +89,7 @@ class TestRulesConfigurationAPI(BaseAPITestCase):
 
     def test_academic_head_cannot_create_rule(self):
         client = self.academic_head_client()
-        resp = client.post('/api/v1/rules/session-matrix/', json.dumps({
+        resp = client.post('/api/v1/rules/session-matrix', json.dumps({
             'rule_name': 'unauthorized',
             'conditions': {},
         }), content_type='application/json')
@@ -98,7 +98,7 @@ class TestRulesConfigurationAPI(BaseAPITestCase):
     def test_counselor_cannot_view_rules(self):
         """Rules are super_admin only — internal config."""
         client = self.counselor_client()
-        resp = client.get('/api/v1/rules/session-matrix/')
+        resp = client.get('/api/v1/rules/session-matrix')
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -362,7 +362,7 @@ class TestEnrollmentCreateWithRuleValidation(BaseAPITestCase):
         )
 
         client = self.counselor_client(sub_center=center)
-        resp = client.post('/api/v1/enrollments/', json.dumps({
+        resp = client.post('/api/v1/enrollments', json.dumps({
             'student': str(student.id),
             'course': str(course.id),
             'session': str(july.id),
@@ -379,7 +379,7 @@ class TestEnrollmentCreateWithRuleValidation(BaseAPITestCase):
         october = IntakeSessionFactory(session_name='October 2026', is_fresh_allowed=True)
 
         client = self.counselor_client(sub_center=center)
-        resp = client.post('/api/v1/enrollments/', json.dumps({
+        resp = client.post('/api/v1/enrollments', json.dumps({
             'student': str(student.id),
             'course': str(course.id),
             'session': str(october.id),

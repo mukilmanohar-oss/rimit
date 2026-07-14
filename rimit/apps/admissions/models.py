@@ -40,12 +40,45 @@ class Student(TenantOwnedModel):
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True)
     primary_phone = models.CharField(max_length=20, db_index=True)
     email = models.EmailField(blank=True, db_index=True)
-    aadhar_hash = models.CharField(max_length=64, unique=True, db_index=True,
+    aadhar_hash = models.CharField(max_length=64, db_index=True,
                                     help_text='SHA-256 hash of salted Aadhar number')
     address_data = models.JSONField(default=dict, blank=True)
-    parent_name = models.CharField(max_length=300, blank=True)
+    data_subject_consent = models.JSONField(
+        default=dict, blank=True,
+        help_text='DPDP Act 2023: {consent_given: bool, timestamp: ISO8601, scope: [...]}'
+    )
+    parent_name = models.CharField(max_length=300, blank=True)  # legacy/generic
+    father_name = models.CharField(max_length=300, blank=True)
+    mother_name = models.CharField(max_length=300, blank=True)
     parent_phone = models.CharField(max_length=20, blank=True)
+    alternate_phone = models.CharField(max_length=20, blank=True)
+    alternate_email = models.EmailField(blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
+
+    # Demographic fields per new schema
+    category = models.CharField(max_length=50, blank=True)
+    employment_status = models.CharField(max_length=50, blank=True)
+    marital_status = models.CharField(max_length=50, blank=True)
+    religion = models.CharField(max_length=50, blank=True)
+    abc_id = models.CharField(max_length=12, blank=True)
+    deb_id = models.CharField(max_length=50, blank=True)
+    receipt_s3_url = models.URLField(max_length=500, blank=True)
+    admission_type = models.CharField(max_length=50, blank=True)
+    admission_semester = models.CharField(max_length=10, blank=True)
+
+    # Lead specific enhancements
+    LEAD_STATUS_PENDING = 'Pending Payment'
+    LEAD_STATUS_ENROLLED = 'Enrolled'
+    LEAD_STATUS_CHOICES = [
+        (LEAD_STATUS_PENDING, 'Pending Payment'),
+        (LEAD_STATUS_ENROLLED, 'Enrolled'),
+    ]
+
+    lead_owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='owned_leads')
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name='student_leads')
+    session = models.ForeignKey('rules.IntakeSession', on_delete=models.SET_NULL, null=True, blank=True, related_name='student_leads')
+    sub_course = models.CharField(max_length=200, blank=True)
+    lead_status = models.CharField(max_length=50, choices=LEAD_STATUS_CHOICES, default=LEAD_STATUS_PENDING, db_index=True)
 
     class Meta:
         db_table = 'students'
@@ -62,6 +95,34 @@ class Student(TenantOwnedModel):
     def set_aadhar(self, aadhar_number: str):
         """Hash and store Aadhar number (never store plaintext)."""
         self.aadhar_hash = hash_aadhar(aadhar_number)
+
+
+class StudentAddress(UUIDModel, TimeStampedModel):
+    """
+    Student discrete localized address block (replaces JSON blob).
+    """
+    student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='address_block')
+    perm_domicile_type = models.CharField(max_length=50)
+    domicile_state = models.CharField(max_length=100, blank=True)
+    perm_address = models.TextField()
+    perm_country = models.CharField(max_length=100)
+    perm_state = models.CharField(max_length=100)
+    perm_district = models.CharField(max_length=100)
+    perm_city = models.CharField(max_length=100)
+    perm_pincode = models.CharField(max_length=6)
+
+    corr_address = models.TextField()
+    corr_country = models.CharField(max_length=100)
+    corr_state = models.CharField(max_length=100)
+    corr_district = models.CharField(max_length=100)
+    corr_city = models.CharField(max_length=100)
+    corr_pincode = models.CharField(max_length=6)
+
+    class Meta:
+        db_table = 'student_addresses'
+
+    def __str__(self):
+        return f"Address block for {self.student.full_name}"
 
 
 class StudentAcademicHistory(UUIDModel, TimeStampedModel):
@@ -107,11 +168,14 @@ class StudentAcademicHistory(UUIDModel, TimeStampedModel):
         Student, on_delete=models.CASCADE, related_name='academic_histories'
     )
     qualification = models.CharField(max_length=20, choices=QUAL_CHOICES, db_index=True)
+    examination = models.CharField(max_length=100, blank=True)
     institution = models.CharField(max_length=300)
     board_university = models.CharField(max_length=300)
     year_of_passing = models.PositiveIntegerField()
     score_type = models.CharField(max_length=20, choices=SCORE_CHOICES)
-    score_value = models.DecimalField(max_digits=6, decimal_places=2)
+    score_value = models.DecimalField(max_digits=5, decimal_places=2)
+    percentage_marks = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    result = models.CharField(max_length=50, blank=True)
     subject_stream = models.CharField(max_length=100, blank=True)
 
     class Meta:
@@ -255,6 +319,7 @@ class Enrollment(TenantOwnedModel):
 
     class Meta:
         db_table = 'enrollments'
+        unique_together = [['student', 'course', 'session']]
         indexes = [
             models.Index(fields=['sub_center', 'status']),
             models.Index(fields=['session', 'status']),
@@ -266,9 +331,9 @@ class Enrollment(TenantOwnedModel):
         return f"{self.student.full_name} → {self.course.name} ({self.status})"
 
     def clean(self):
-        """Validate status transitions."""
-        if self.pk:
-            old = Enrollment.objects.get(pk=self.pk)
+        """Validate status transitions and business logic."""
+        if not self._state.adding:
+            old = Enrollment.all_objects.get(pk=self.pk)
             if old.status != self.status:
                 allowed = self.TRANSITIONS.get(old.status, [])
                 if self.status not in allowed:
@@ -276,6 +341,40 @@ class Enrollment(TenantOwnedModel):
                         'status': f'Invalid transition: {old.status} → {self.status}. '
                                   f'Allowed: {allowed}'
                     })
+                
+                # Business Logic: Enforce Enrollment-to-Document linkage
+                if self.status == self.STATUS_DOC_VERIFIED:
+                    docs = self.student.documents.all()
+                    if not docs.exists():
+                        raise ValidationError({'status': 'Cannot verify documents: Student has no documents uploaded.'})
+                    if docs.filter(status='rejected').exists():
+                        raise ValidationError({'status': 'Cannot verify documents: Student has rejected documents.'})
+                    if docs.filter(status='pending').exists():
+                        raise ValidationError({'status': 'Cannot verify documents: Student has pending documents to be reviewed.'})
+
+                # Business Logic: Enforce Fee Validation
+                if self.status == self.STATUS_FEE_PAID:
+                    # check if the sum of captured payments >= required fees
+                    from django.db.models import Sum
+                    from apps.finance.models import PaymentLedger
+                    # sum of course fees
+                    required_fee = self.course.fees.filter(is_active=True).aggregate(Sum('amount'))['amount__sum'] or 0
+                    paid = PaymentLedger.all_objects.filter(enrollment=self, status='captured').aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
+                    if paid < required_fee:
+                        raise ValidationError({
+                            'status': f'Cannot transition to Fee Paid: Total fee required is ₹{required_fee}, but only ₹{paid} has been captured.'
+                        })
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        if self.status == self.STATUS_ENROLLMENT_GENERATED and not self.enrollment_number:
+            import datetime
+            year = datetime.date.today().year
+            # simple auto-increment logic or random UUID slice for uniqueness
+            import random
+            rand_suffix = str(random.randint(10000, 99999))
+            self.enrollment_number = f"ENR/{year}/{self.sub_center_id}/{rand_suffix}"
+        super().save(*args, **kwargs)
 
     def can_transition_to(self, new_status: str) -> bool:
         return new_status in self.TRANSITIONS.get(self.status, [])

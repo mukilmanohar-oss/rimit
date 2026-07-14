@@ -50,8 +50,46 @@ def verify_mfa(request):
     return Response({'detail': 'Invalid OTP'}, status=400)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """Change the authenticated user's password."""
+    old_password = request.data.get('old_password')
+    new_password = request.data.get('new_password')
+    if not old_password or not new_password:
+        return Response({'detail': 'Both old_password and new_password are required.'}, status=400)
+    if not request.user.check_password(old_password):
+        return Response({'detail': 'Incorrect old password.'}, status=400)
+    request.user.set_password(new_password)
+    request.user.save()
+    return Response({'status': 'password-changed'})
+
+
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
+from rest_framework.response import Response
+
+class CustomAuthToken(ObtainAuthToken):
+    def post(self, request, *args, **kwargs):
+        # Gap 11: MFA OTP simulated flow
+        otp = request.data.get('otp', '')
+        if otp != '123456':
+            return Response({'non_field_errors': ['Invalid or missing OTP. Please enter 123456.']}, status=400)
+            
+        serializer = self.serializer_class(data=request.data,
+                                           context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({
+            'token': token.key,
+            'user_id': user.pk,
+            'email': user.email
+        })
+
 urlpatterns = [
-    path('token', obtain_auth_token, name='token-auth'),
+    path('token', CustomAuthToken.as_view(), name='token-auth'),
     path('profile', profile, name='profile'),
     path('mfa/verify', verify_mfa, name='verify-mfa'),
+    path('password/change', change_password, name='change-password'),
 ]

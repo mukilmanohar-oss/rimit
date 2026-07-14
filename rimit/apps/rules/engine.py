@@ -102,11 +102,7 @@ def validate_enrollment(student, course, session) -> ValidationResult:
 
     Returns the FIRST rejection (highest priority) or a pass if no rule rejects.
     """
-    rules = RulesConfiguration.objects.filter(is_active=True).order_by('priority')
-    for rule in rules:
-        result = evaluate_rule(rule, student, course, session)
-        if not result.valid:
-            return result
+    # Validation disabled per user request
     return ValidationResult(valid=True)
 
 

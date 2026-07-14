@@ -30,7 +30,7 @@ class TestSubCenterAPI(BaseAPITestCase):
 
     def test_super_admin_can_create_sub_center(self):
         client = self.super_admin_client()
-        resp = client.post('/api/v1/sub-centers/', {
+        resp = client.post('/api/v1/sub-centers', {
             'center_code': 'KL-TVM-001',
             'name': 'Trivandrum Hub',
             'location': 'Trivandrum, Kerala',
@@ -41,7 +41,7 @@ class TestSubCenterAPI(BaseAPITestCase):
 
     def test_counselor_cannot_create_sub_center(self):
         client = self.counselor_client()
-        resp = client.post('/api/v1/sub-centers/', {
+        resp = client.post('/api/v1/sub-centers', {
             'center_code': 'XX-XXX-001',
             'name': 'Forbidden',
             'location': 'X',
@@ -53,7 +53,7 @@ class TestSubCenterAPI(BaseAPITestCase):
         SubCenterFactory(center_code='S-A1', status='active')
         SubCenterFactory(center_code='S-A2', status='suspended')
         client = self.academic_head_client()
-        resp = client.get('/api/v1/sub-centers/?status=active')
+        resp = client.get('/api/v1/sub-centers?status=active')
         # Should include TEST-A, TEST-B (from setUp) + S-A1 (4 total active)
         assert resp.status_code == status.HTTP_200_OK
 
@@ -63,7 +63,7 @@ class TestStudentRegistration(BaseAPITestCase):
 
     def test_counselor_can_register_student_in_own_center(self):
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.post('/api/v1/students/', json.dumps({
+        resp = client.post('/api/v1/students', json.dumps({
             'full_name': 'Ravi Kumar',
             'dob': '2000-05-15',
             'gender': 'M',
@@ -85,7 +85,7 @@ class TestStudentRegistration(BaseAPITestCase):
 
     def test_invalid_phone_number_rejected(self):
         client = self.counselor_client()
-        resp = client.post('/api/v1/students/', json.dumps({
+        resp = client.post('/api/v1/students', json.dumps({
             'full_name': 'Test',
             'dob': '2000-01-01',
             'primary_phone': '123',
@@ -96,7 +96,7 @@ class TestStudentRegistration(BaseAPITestCase):
 
     def test_invalid_aadhar_format_rejected(self):
         client = self.counselor_client()
-        resp = client.post('/api/v1/students/', json.dumps({
+        resp = client.post('/api/v1/students', json.dumps({
             'full_name': 'Test',
             'dob': '2000-01-01',
             'primary_phone': '+919876543210',
@@ -112,7 +112,7 @@ class TestStudentRegistration(BaseAPITestCase):
         StudentFactory(sub_center=self.center_a, aadhar_hash=existing_hash, full_name='First Student')
 
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.post('/api/v1/students/', json.dumps({
+        resp = client.post('/api/v1/students', json.dumps({
             'full_name': 'Duplicate Student',
             'dob': '2000-01-01',
             'primary_phone': '+919876543210',
@@ -136,7 +136,7 @@ class TestTenantIsolation(BaseAPITestCase):
         student_b = StudentFactory(sub_center=self.center_b, full_name='Student Beta')
 
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.get('/api/v1/students/')
+        resp = client.get('/api/v1/students')
         assert resp.status_code == status.HTTP_200_OK
         names = [s['full_name'] for s in resp.data['results']]
         assert 'Student Alpha' in names
@@ -147,7 +147,7 @@ class TestTenantIsolation(BaseAPITestCase):
         student_b = StudentFactory(sub_center=self.center_b, full_name='Student B')
 
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.get(f'/api/v1/students/{student_b.id}/')
+        resp = client.get(f'/api/v1/students/{student_b.id}')
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
     def test_counselor_cannot_update_other_center_student(self):
@@ -155,7 +155,7 @@ class TestTenantIsolation(BaseAPITestCase):
         student_b = StudentFactory(sub_center=self.center_b, full_name='Original Name')
 
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.patch(f'/api/v1/students/{student_b.id}/',
+        resp = client.patch(f'/api/v1/students/{student_b.id}',
                             json.dumps({'full_name': 'Hacked Name'}),
                             content_type='application/json')
         assert resp.status_code == status.HTTP_404_NOT_FOUND
@@ -169,7 +169,7 @@ class TestTenantIsolation(BaseAPITestCase):
         student_b = StudentFactory(sub_center=self.center_b)
 
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.delete(f'/api/v1/students/{student_b.id}/')
+        resp = client.delete(f'/api/v1/students/{student_b.id}')
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
         # Verify still exists (use all_objects)
@@ -181,7 +181,7 @@ class TestTenantIsolation(BaseAPITestCase):
         StudentFactory(sub_center=self.center_b, full_name='Student B')
 
         client = self.super_admin_client()
-        resp = client.get('/api/v1/students/')
+        resp = client.get('/api/v1/students')
         assert resp.data['count'] == 2
 
     def test_academic_head_can_see_all_centers(self):
@@ -190,7 +190,7 @@ class TestTenantIsolation(BaseAPITestCase):
         StudentFactory(sub_center=self.center_b, full_name='Student B')
 
         client = self.academic_head_client()
-        resp = client.get('/api/v1/students/')
+        resp = client.get('/api/v1/students')
         assert resp.data['count'] == 2
 
     def test_finance_can_only_see_own_center(self):
@@ -199,7 +199,7 @@ class TestTenantIsolation(BaseAPITestCase):
         StudentFactory(sub_center=self.center_b, full_name='Student B')
 
         client = self.finance_client(sub_center=self.center_a)
-        resp = client.get('/api/v1/students/')
+        resp = client.get('/api/v1/students')
         assert resp.data['count'] == 1
         assert resp.data['results'][0]['full_name'] == 'Student A'
 
@@ -210,7 +210,7 @@ class TestStudentAcademicHistory(BaseAPITestCase):
     def test_add_academic_history_to_student(self):
         student = StudentFactory(sub_center=self.center_a)
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.post(f'/api/v1/students/{student.id}/academic_histories/', json.dumps({
+        resp = client.post(f'/api/v1/students/{student.id}/academic_histories', json.dumps({
             'qualification': '12th',
             'institution': 'Govt Higher Secondary',
             'board_university': 'CBSE',
@@ -229,7 +229,7 @@ class TestStudentDocumentUpload(BaseAPITestCase):
     def test_counselor_can_upload_document(self):
         student = StudentFactory(sub_center=self.center_a)
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.post('/api/v1/students-docs/', json.dumps({
+        resp = client.post('/api/v1/students-docs', json.dumps({
             'student': str(student.id),
             'doc_category': 'identity',
             'title': 'Aadhar Card',
@@ -245,7 +245,7 @@ class TestStudentDocumentUpload(BaseAPITestCase):
             s3_object_uri='s3://test', status=StudentDoc.STATUS_PENDING,
         )
         client = self.academic_head_client()
-        resp = client.post(f'/api/v1/students-docs/{doc.id}/verify/')
+        resp = client.post(f'/api/v1/students-docs/{doc.id}/verify')
         assert resp.status_code == status.HTTP_200_OK
         doc.refresh_from_db()
         assert doc.status == StudentDoc.STATUS_VERIFIED
@@ -257,7 +257,7 @@ class TestStudentDocumentUpload(BaseAPITestCase):
             s3_object_uri='s3://test', status=StudentDoc.STATUS_PENDING,
         )
         client = self.academic_head_client()
-        resp = client.post(f'/api/v1/students-docs/{doc.id}/reject/',
+        resp = client.post(f'/api/v1/students-docs/{doc.id}/reject',
                            json.dumps({'reason': 'Image blurry'}),
                            content_type='application/json')
         assert resp.status_code == status.HTTP_200_OK
@@ -273,7 +273,7 @@ class TestStudentDocumentUpload(BaseAPITestCase):
             s3_object_uri='s3://test', status=StudentDoc.STATUS_PENDING,
         )
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.post(f'/api/v1/students-docs/{doc.id}/verify/')
+        resp = client.post(f'/api/v1/students-docs/{doc.id}/verify')
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -299,7 +299,7 @@ class TestEnrollmentStateMachine(BaseAPITestCase):
     def test_valid_status_transition(self):
         enrollment = self._setup_enrollment()
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.patch(f'/api/v1/enrollments/{enrollment.id}/status/',
+        resp = client.patch(f'/api/v1/enrollments/{enrollment.id}/status',
                             json.dumps({'status': Enrollment.STATUS_DOC_VERIFIED}),
                             content_type='application/json')
         assert resp.status_code == status.HTTP_200_OK, resp.content
@@ -310,7 +310,7 @@ class TestEnrollmentStateMachine(BaseAPITestCase):
         """Cannot jump from Applied directly to Fee Paid."""
         enrollment = self._setup_enrollment()
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.patch(f'/api/v1/enrollments/{enrollment.id}/status/',
+        resp = client.patch(f'/api/v1/enrollments/{enrollment.id}/status',
                             json.dumps({'status': Enrollment.STATUS_FEE_PAID}),
                             content_type='application/json')
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -322,7 +322,7 @@ class TestEnrollmentStateMachine(BaseAPITestCase):
         enrollment.status = Enrollment.STATUS_CANCELLED
         enrollment.save()
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.patch(f'/api/v1/enrollments/{enrollment.id}/status/',
+        resp = client.patch(f'/api/v1/enrollments/{enrollment.id}/status',
                             json.dumps({'status': Enrollment.STATUS_APPLIED}),
                             content_type='application/json')
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -333,14 +333,14 @@ class TestEnrollmentStateMachine(BaseAPITestCase):
         enrollment_b = self._setup_enrollment(sub_center=self.center_b)
 
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.get('/api/v1/enrollments/')
+        resp = client.get('/api/v1/enrollments')
         assert resp.data['count'] == 1
         assert str(resp.data['results'][0]['id']) == str(enrollment_a.id)
 
     def test_next_valid_statuses_returned_in_serializer(self):
         enrollment = self._setup_enrollment()
         client = self.counselor_client(sub_center=self.center_a)
-        resp = client.get(f'/api/v1/enrollments/{enrollment.id}/')
+        resp = client.get(f'/api/v1/enrollments/{enrollment.id}')
         assert resp.status_code == status.HTTP_200_OK
         assert 'next_valid_statuses' in resp.data
         assert Enrollment.STATUS_DOC_VERIFIED in resp.data['next_valid_statuses']

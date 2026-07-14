@@ -1,0 +1,11 @@
+FROM oven/bun:1 AS base
+WORKDIR /app
+COPY package.json bun.lock* package-lock.json* ./
+RUN bun install
+COPY . .
+RUN bun run db:generate || true
+ENV API_URL="http://app:8000"
+RUN bun run build
+ENV HOSTNAME="0.0.0.0"
+ENV PORT=3000
+CMD ["bun", ".next/standalone/server.js"]

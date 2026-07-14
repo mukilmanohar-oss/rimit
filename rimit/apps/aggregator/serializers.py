@@ -21,7 +21,8 @@ class CourseSerializer(serializers.ModelSerializer):
 
 
 class CourseListSerializer(serializers.ModelSerializer):
-    """Lightweight serializer for list view (no nested fees)."""
+    """Serializer for list view."""
+    fees = FeeStructureSerializer(many=True, read_only=True)
     university_name = serializers.CharField(source='university.name', read_only=True)
     university_state = serializers.CharField(source='university.state', read_only=True)
     total_fee = serializers.SerializerMethodField()
@@ -31,7 +32,7 @@ class CourseListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'stream', 'duration_months', 'is_active',
             'university', 'university_name', 'university_state',
-            'eligibility_text', 'total_fee', 'created_at',
+            'eligibility_text', 'total_fee', 'fees', 'created_at',
         ]
 
     def get_total_fee(self, obj):
@@ -39,6 +40,9 @@ class CourseListSerializer(serializers.ModelSerializer):
 
 
 class UniversityDocVaultSerializer(serializers.ModelSerializer):
+    university_name = serializers.CharField(source='university.name', read_only=True)
+    course_name = serializers.CharField(source='course.name', read_only=True)
+
     class Meta:
         model = UniversityDocVault
         fields = '__all__'

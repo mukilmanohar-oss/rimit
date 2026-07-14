@@ -251,7 +251,7 @@ class TestLeadIngestionLogAPI(BaseAPITestCase):
             raw_payload={'name': 'Test'},
         )
         client = self.academic_head_client()
-        resp = client.get('/api/v1/leads/' if False else '/api/v1/notifications/logs/')  # leads endpoint not in router yet
+        resp = client.get('/api/v1/leads/' if False else '/api/v1/notifications/logs')  # leads endpoint not in router yet
         # Actually the leads endpoint is not yet wired — let's just check notification logs work
         # The lead API would be added as a separate viewset if needed
         # For now, verify NotificationLog endpoint works
@@ -259,7 +259,7 @@ class TestLeadIngestionLogAPI(BaseAPITestCase):
 
     def test_counselor_cannot_view_leads(self):
         client = self.counselor_client()
-        resp = client.get('/api/v1/notifications/logs/')
+        resp = client.get('/api/v1/notifications/logs')
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
 

@@ -8,6 +8,9 @@ falls back to standard Django SearchFilter + trigram for SQLite in dev.
 """
 import uuid
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.indexes import GinIndex
 from apps.common.models import UUIDModel, TimeStampedModel
 
 
@@ -29,6 +32,17 @@ class University(UUIDModel, TimeStampedModel):
     website = models.URLField(blank=True)
     logo_uri = models.URLField(blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
+
+    # Net Remittance Model:
+    # Default university share percentage of the Total_Fee.
+    # Can be overridden per Course (Course.university_share_percent).
+    default_university_share_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text='Default university share % of total fee (0-100). Used if course override is NULL.',
+    )
 
     class Meta:
         db_table = 'universities'
@@ -68,15 +82,28 @@ class Course(UUIDModel, TimeStampedModel):
     stream = models.CharField(max_length=50, choices=STREAM_CHOICES, db_index=True)
     duration_months = models.PositiveIntegerField()
     eligibility_text = models.TextField(blank=True)
+    eligibility_criteria_json = models.JSONField(default=dict, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
 
+    # Net Remittance Model (optional override):
+    # If set, this percentage overrides University.default_university_share_percent.
+    university_share_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text='Optional override: university share % of total fee (0-100). NULL = inherit from university.',
+    )
+
     # In prod (PostgreSQL): add a generated tsvector column + GIN index
-    # search_vector = SearchVectorField(null=True, blank=True)
+    search_vector = SearchVectorField(null=True, blank=True)
     # For SQLite dev: use DRF SearchFilter on name + stream + eligibility_text
 
     class Meta:
         db_table = 'courses'
         indexes = [
+            GinIndex(fields=['search_vector']),
             models.Index(fields=['university', 'is_active']),
             models.Index(fields=['stream', 'is_active']),
         ]
@@ -164,10 +191,21 @@ class UniversityDocVault(UUIDModel, TimeStampedModel):
         related_name='uploaded_university_docs',
     )
 
+    # Optional: map the document directly to a course (e.g., course-specific prospectus).
+    course = models.ForeignKey(
+        'aggregator.Course',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='documents',
+        help_text='Optional course mapping for course-specific prospectus/library tiles.',
+    )
+
     class Meta:
         db_table = 'university_doc_vault'
         indexes = [
             models.Index(fields=['university', 'doc_type']),
+                models.Index(fields=['course', 'doc_type']),
             models.Index(fields=['is_public']),
         ]
         ordering = ['-created_at']

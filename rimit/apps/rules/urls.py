@@ -11,5 +11,5 @@ router.register('rules/session-matrix', RulesConfigurationViewSet, basename='rul
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('rules/validate/', EnrollmentValidationView.as_view(), name='rules-validate'),
+    path('rules/validate', EnrollmentValidationView.as_view(), name='rules-validate'),
 ]

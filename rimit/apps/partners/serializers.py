@@ -1,7 +1,7 @@
 """Serializers for partners app (SubCenter + SystemUser)."""
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from apps.partners.models import SubCenter, SystemUser
+from apps.partners.models import SubCenter, SystemUser, SubCenterUniversityMapping
 
 
 class SubCenterSerializer(serializers.ModelSerializer):
@@ -41,3 +41,13 @@ class SystemUserCreateSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             user = User.objects.create_user(username=username, email=validated_data['email'], password=password)
             return SystemUser.objects.create(user=user, **validated_data)
+
+
+class SubCenterUniversityMappingSerializer(serializers.ModelSerializer):
+    sub_center_code = serializers.CharField(source='sub_center.center_code', read_only=True)
+    university_name = serializers.CharField(source='university.name', read_only=True)
+
+    class Meta:
+        model = SubCenterUniversityMapping
+        fields = ['id', 'sub_center', 'sub_center_code', 'university', 'university_name', 'created_at', 'updated_at']
+        read_only_fields = ('id', 'created_at', 'updated_at', 'sub_center_code', 'university_name')

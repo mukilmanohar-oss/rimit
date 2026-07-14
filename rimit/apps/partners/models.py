@@ -8,6 +8,7 @@ SystemUser = the link between Django's auth User and the tenant + role.
 """
 import uuid
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import User
 from apps.common.models import UUIDModel, TimeStampedModel
 
@@ -39,6 +40,17 @@ class SubCenter(UUIDModel, TimeStampedModel):
     contact_phone = models.CharField(max_length=20, blank=True)
     contact_email = models.EmailField(blank=True)
 
+    # Net Remittance Model:
+    # This is the sub-center's commission percentage of the Gross Commission Pool.
+    # e.g., 75.00 means the sub-center keeps 75% of (Total_Fee - University_Share).
+    commission_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text='Sub-center commission % of gross pool (0-100). Deducted upfront at checkout.',
+    )
+
     class Meta:
         db_table = 'sub_centers'
         ordering = ['center_code']
@@ -64,11 +76,13 @@ class SystemUser(UUIDModel, TimeStampedModel):
     ROLE_ACADEMIC_HEAD = 'academic_head'
     ROLE_COUNSELOR = 'counselor'
     ROLE_FINANCE = 'finance'
+    ROLE_SUBCENTER = 'subcenter'
     ROLE_CHOICES = [
         (ROLE_SUPER_ADMIN, 'Super Admin (MD)'),
         (ROLE_ACADEMIC_HEAD, 'Academic Head / Manager'),
         (ROLE_COUNSELOR, 'Counselor / Admission Officer'),
         (ROLE_FINANCE, 'Finance / Accounts Officer'),
+        (ROLE_SUBCENTER, 'Sub-Center Admin'),
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='systemuser')
@@ -99,3 +113,29 @@ class SystemUser(UUIDModel, TimeStampedModel):
     def can_bypass_tenant(self):
         """Super Admin and Academic Head bypass tenant scoping."""
         return self.role in (self.ROLE_SUPER_ADMIN, self.ROLE_ACADEMIC_HEAD)
+
+
+class SubCenterUniversityMapping(UUIDModel, TimeStampedModel):
+    """Explicit allow-list: which universities a sub-center can access."""
+
+    sub_center = models.ForeignKey(
+        SubCenter,
+        on_delete=models.CASCADE,
+        related_name='university_mappings',
+    )
+    university = models.ForeignKey(
+        'aggregator.University',
+        on_delete=models.CASCADE,
+        related_name='sub_center_mappings',
+    )
+
+    class Meta:
+        db_table = 'sub_center_university_mappings'
+        unique_together = [('sub_center', 'university')]
+        indexes = [
+            models.Index(fields=['sub_center', 'university']),
+            models.Index(fields=['university']),
+        ]
+
+    def __str__(self):
+        return f"{self.sub_center.center_code} → {self.university.name}"

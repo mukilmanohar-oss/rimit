@@ -18,7 +18,9 @@ urlpatterns = [
         path('', include('apps.rules.urls')),
         path('', include('apps.finance.urls')),
         path('', include('apps.notifications.urls')),
+        path('', include('apps.integrations.urls')),
         path('auth/', include('apps.common.urls_auth')),
+        path('support/', include('apps.common.urls_tickets')),
     ])),
 
     # Webhooks (no JWT auth, HMAC verified in view)

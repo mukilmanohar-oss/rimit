@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.idea
+.vscode
+__pycache__
+.pytest_cache
+*.sqlite3
+rimit/venv
+rimit/.venv
+rimit/staticfiles
+rimit/media

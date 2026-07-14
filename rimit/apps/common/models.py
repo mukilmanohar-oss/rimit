@@ -98,3 +98,51 @@ class TenantOwnedModel(TimeStampedModel, UUIDModel):
 
     class Meta:
         abstract = True
+
+
+class Ticket(TenantOwnedModel):
+    STATUS_OPEN = "Open"
+    STATUS_IN_PROGRESS = "In Progress"
+    STATUS_RESOLVED = "Resolved"
+    STATUS_CLOSED = "Closed"
+    STATUS_CHOICES = [
+        (STATUS_OPEN, "Open"),
+        (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_RESOLVED, "Resolved"),
+        (STATUS_CLOSED, "Closed"),
+    ]
+
+    ESCALATION_L1 = "L1"
+    ESCALATION_L2 = "L2"
+    ESCALATION_L3 = "L3"
+    ESCALATION_CHOICES = [
+        (ESCALATION_L1, "L1"),
+        (ESCALATION_L2, "L2"),
+        (ESCALATION_L3, "L3"),
+    ]
+
+    subject = models.CharField(max_length=255)
+    description = models.TextField()
+    category = models.CharField(max_length=50, default='General')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=STATUS_OPEN, db_index=True)
+    escalation_level = models.CharField(max_length=10, choices=ESCALATION_CHOICES, default=ESCALATION_L1)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_tickets")
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_tickets")
+
+    class Meta:
+        db_table = "tickets"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Ticket {self.id} - {self.subject}"
+
+
+class TicketReply(UUIDModel, TimeStampedModel):
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="replies")
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    message = models.TextField()
+    is_admin_reply = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "ticket_replies"
+        ordering = ["created_at"]
