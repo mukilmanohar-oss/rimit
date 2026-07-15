@@ -5,6 +5,7 @@ version: '3.8'
 services:
   app:
     build: .
+    restart: always
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --reload
     volumes:
       - ./:/app
@@ -21,18 +22,14 @@ services:
     build:
       context: ../
       dockerfile: Dockerfile.frontend
+    restart: always
     ports:
-      - '3000:3000'
+      - '80:80'
     depends_on: [app]
-    volumes:
-      - ../src:/app/src
-      - ../public:/app/public
-      - ../next.config.ts:/app/next.config.ts
     environment:
-      - PORT=3000
+      - PORT=80
       - API_URL=http://app:8000
       - NEXT_PUBLIC_API_URL=http://app:8000
-    command: bun run dev
 
 #  celery:
 #    build: .
@@ -56,6 +53,7 @@ services:
 #
   db:
     image: postgres:16
+    restart: always
     environment:
       POSTGRES_DB: rimit
       POSTGRES_USER: rimit

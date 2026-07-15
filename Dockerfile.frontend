@@ -4,9 +4,15 @@ COPY package.json bun.lock* package-lock.json* ./
 RUN bun install
 COPY . .
 RUN bun run db:generate || true
+
+# Run production build
+ENV NODE_ENV=production
+RUN bun run build
+
 ENV API_URL="http://app:8000"
 ENV NEXT_PUBLIC_API_URL="http://app:8000"
 ENV HOSTNAME="0.0.0.0"
 ENV PORT=80
-# Default: dev mode (docker-compose overrides CMD as needed)
-CMD ["bun", "run", "dev"]
+
+# Start in production mode
+CMD ["bun", "run", "start"]
