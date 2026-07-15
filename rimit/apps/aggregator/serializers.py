@@ -42,11 +42,16 @@ class CourseListSerializer(serializers.ModelSerializer):
 class UniversityDocVaultSerializer(serializers.ModelSerializer):
     university_name = serializers.CharField(source='university.name', read_only=True)
     course_name = serializers.CharField(source='course.name', read_only=True)
+    s3_object_uri = serializers.SerializerMethodField()
 
     class Meta:
         model = UniversityDocVault
         fields = '__all__'
         read_only_fields = ('id', 'created_at', 'updated_at', 'uploaded_by', 's3_object_uri', 'file_size_bytes', 'mime_type')
+
+    def get_s3_object_uri(self, obj):
+        from apps.common.utils_storage import get_presigned_url
+        return get_presigned_url(obj.s3_object_uri)
 
     def create(self, validated_data):
         request = self.context.get('request')

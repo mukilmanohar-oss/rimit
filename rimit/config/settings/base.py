@@ -171,11 +171,11 @@ CELERY_TASK_SOFT_TIME_LIMIT = 240
 USE_LOCAL_STORAGE = os.environ.get('USE_LOCAL_STORAGE', 'True').lower() == 'true'
 LOCAL_STORAGE_PATH = os.environ.get('LOCAL_STORAGE_PATH', str(BASE_DIR / 'media'))
 
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'rimit-docs')
-AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', '')
-AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'ap-south-1')
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '').strip(' "\'')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '').strip(' "\'')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'rimit-docs').strip(' "\'')
+AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', '').strip(' "\'')
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'ap-south-1').strip(' "\'')
 
 # ───────────── Security (RFP) ─────────────
 SECURE_BROWSER_XSS_FILTER = True

@@ -20,10 +20,16 @@ class StudentAddressSerializer(serializers.ModelSerializer):
 
 
 class StudentDocSerializer(serializers.ModelSerializer):
+    s3_object_uri = serializers.SerializerMethodField()
+
     class Meta:
         model = StudentDoc
         fields = '__all__'
         read_only_fields = ('id', 'created_at', 'updated_at', 'verified_by', 'verified_at', 's3_object_uri', 'file_size_bytes', 'mime_type')
+
+    def get_s3_object_uri(self, obj):
+        from apps.common.utils_storage import get_presigned_url
+        return get_presigned_url(obj.s3_object_uri)
 
 
 class StudentSerializer(serializers.ModelSerializer):
@@ -34,6 +40,7 @@ class StudentSerializer(serializers.ModelSerializer):
                                           help_text='Plaintext Aadhar; stored as SHA-256 hash')
     sub_center_code = serializers.CharField(source='sub_center.center_code', read_only=True)
     course_name = serializers.CharField(source='course.name', read_only=True)
+    receipt_s3_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Student
@@ -47,6 +54,12 @@ class StudentSerializer(serializers.ModelSerializer):
             'academic_histories', 'documents', 'created_at', 'updated_at',
         ]
         read_only_fields = ('id', 'aadhar_hash', 'sub_center', 'created_at', 'updated_at')
+
+    def get_receipt_s3_url(self, obj):
+        if obj.receipt_s3_url:
+            from apps.common.utils_storage import get_presigned_url
+            return get_presigned_url(obj.receipt_s3_url)
+        return None
 
     def validate_primary_phone(self, value):
         """Indian phone format: +91XXXXXXXXXX or 0XXXXXXXXXX or 10 digits."""

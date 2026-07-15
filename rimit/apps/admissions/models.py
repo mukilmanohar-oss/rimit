@@ -390,7 +390,9 @@ class Enrollment(TenantOwnedModel):
             # simple auto-increment logic or random UUID slice for uniqueness
             import random
             rand_suffix = str(random.randint(10000, 99999))
-            self.enrollment_number = f"ENR/{year}/{self.sub_center_id}/{rand_suffix}"
+            # Slice sub_center_id to 8 chars to avoid exceeding 50 char limit of enrollment_number
+            short_sc = str(self.sub_center_id).split('-')[0]
+            self.enrollment_number = f"ENR/{year}/{short_sc}/{rand_suffix}"
         super().save(*args, **kwargs)
 
     def can_transition_to(self, new_status: str) -> bool:
