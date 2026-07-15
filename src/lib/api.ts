@@ -3,7 +3,7 @@
  *
  * All requests go through the Caddy gateway with XTransformPort=8000
  * to reach the Django backend (in sandbox preview), OR through Next.js
- * rewrites (in local dev on port 3000).
+ * rewrites (in local dev on port 80).
  *
  * Note: Django routers use trailing_slash=False, so all paths are slash-free.
  */

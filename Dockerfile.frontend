@@ -7,6 +7,6 @@ RUN bun run db:generate || true
 ENV API_URL="http://app:8000"
 ENV NEXT_PUBLIC_API_URL="http://app:8000"
 ENV HOSTNAME="0.0.0.0"
-ENV PORT=3000
+ENV PORT=80
 # Default: dev mode (docker-compose overrides CMD as needed)
 CMD ["bun", "run", "dev"]

@@ -22,15 +22,7 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  webpack: (config: any, { dev, isServer }: any) => {
-    if (dev && !isServer) {
-      config.watchOptions = {
-        poll: 1000,
-        aggregateTimeout: 300,
-      };
-    }
-    return config;
-  },
+
   async rewrites() {
     // Proxy /api/* and /webhooks/* to Django backend on port 8000.
     // In sandbox preview, Caddy intercepts these via XTransformPort query param first.

@@ -590,7 +590,8 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
             <EmptyState message="No documents uploaded yet." />
           ) : (
             <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+<table className="w-full text-sm">
                 <thead className="bg-muted/30 border-b border-border">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Document Title</th>
@@ -689,6 +690,7 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
                   ))}
                 </tbody>
               </table>
+</div>
             </div>
           )}
         </div>

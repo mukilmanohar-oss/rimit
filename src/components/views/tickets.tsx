@@ -305,7 +305,8 @@ export function TicketsView({ profile }: { profile: UserProfile }) {
         tickets.length === 0 ? <EmptyState message="No tickets found" /> : (
           <div className="space-y-3">
             <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+<table className="w-full text-sm">
                 <thead className="bg-muted/30 border-b border-border">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">ID</th>
@@ -339,6 +340,7 @@ export function TicketsView({ profile }: { profile: UserProfile }) {
                   ))}
                 </tbody>
               </table>
+</div>
             </div>
 
             <div className="flex items-center justify-between py-2">

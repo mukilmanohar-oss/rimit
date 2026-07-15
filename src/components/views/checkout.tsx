@@ -94,7 +94,8 @@ export function CheckoutView({ profile }: { profile: UserProfile }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+<table className="w-full text-sm">
               <thead className="bg-muted/30 border-b border-border">
                 <tr>
                   <th className="px-4 py-3 text-left w-12">
@@ -141,6 +142,7 @@ export function CheckoutView({ profile }: { profile: UserProfile }) {
                 ))}
               </tbody>
             </table>
+</div>
           </div>
         </div>
 

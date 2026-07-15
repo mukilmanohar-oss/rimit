@@ -171,7 +171,8 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
         students.length === 0 ? <EmptyState message="No students found" /> : (
           <div className="space-y-4">
             <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+<table className="w-full text-sm">
                 <thead className="bg-muted/30 border-b border-border">
                   <tr>
                     <th className="w-10 px-4 py-3"></th>
@@ -214,6 +215,7 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
                   ))}
                 </tbody>
               </table>
+</div>
             </div>
 
             <div className="flex items-center justify-between py-2">

@@ -77,7 +77,8 @@ export function LeadsView({ profile }: { profile: UserProfile }) {
           </div>
         )}
         <div className="flex-1 overflow-auto">
-          <table className="w-full text-left text-sm text-muted-foreground">
+          <div className="overflow-x-auto">
+<table className="w-full text-left text-sm text-muted-foreground">
             <thead className="text-xs uppercase bg-muted/50 text-foreground sticky top-0 z-20 shadow-sm">
               <tr>
                 <th className="px-6 py-4 font-semibold">Name & Contact</th>
@@ -135,6 +136,7 @@ export function LeadsView({ profile }: { profile: UserProfile }) {
               )}
             </tbody>
           </table>
+</div>
         </div>
         
         {/* Pagination */}

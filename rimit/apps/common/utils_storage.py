@@ -27,11 +27,17 @@ def handle_file_upload(file_obj, directory, filename_prefix=""):
         return fs.url(saved_name)
     else:
         # S3 / MinIO
+        endpoint = settings.AWS_S3_ENDPOINT_URL
+        if isinstance(endpoint, str):
+            endpoint = endpoint.strip(' "\'')
+            if not endpoint:
+                endpoint = None
+
         s3 = boto3.client(
             's3',
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            endpoint_url=endpoint,
             region_name=settings.AWS_S3_REGION_NAME
         )
         
@@ -45,7 +51,7 @@ def handle_file_upload(file_obj, directory, filename_prefix=""):
         )
         
         # Return standard s3 uri format or direct url
-        if settings.AWS_S3_ENDPOINT_URL:
-            return urljoin(settings.AWS_S3_ENDPOINT_URL, f"{settings.AWS_STORAGE_BUCKET_NAME}/{file_path}")
+        if endpoint:
+            return urljoin(endpoint, f"{settings.AWS_STORAGE_BUCKET_NAME}/{file_path}")
         else:
-            return f"s3://{settings.AWS_STORAGE_BUCKET_NAME}/{file_path}"
+            return f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{file_path}"

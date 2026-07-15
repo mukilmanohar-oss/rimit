@@ -176,11 +176,13 @@ const NAV_ITEMS: { id: View; label: string; icon: string; roles: string[] }[] = 
   { id: 'notification-logs', label: 'Notification Logs', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', roles: ['super_admin', 'academic_head', 'finance'] },
 ];
 
-export function Sidebar({ profile, view, setView, onLogout }: {
+export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setMobileMenuOpen }: {
   profile: UserProfile;
   view: View;
   setView: (v: View) => void;
   onLogout: () => void;
+  mobileMenuOpen?: boolean;
+  setMobileMenuOpen?: (open: boolean) => void;
 }) {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
@@ -222,43 +224,65 @@ export function Sidebar({ profile, view, setView, onLogout }: {
   const items = NAV_ITEMS.filter(i => i.roles.includes(profile.role));
 
   return (
-    <aside className={`${collapsed ? 'w-16' : 'w-60'} bg-sidebar border-r border-sidebar-border flex flex-col h-screen sticky top-0 transition-all duration-300`}>
-      <div className={`p-5 border-b border-sidebar-border flex items-center justify-between ${collapsed ? 'px-2' : ''}`}>
-        {!collapsed && (
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-1.5 h-6 bg-primary rounded-sm" />
-              <span className="text-sm font-bold tracking-tight">RIMIT</span>
-            </div>
-            <p className="text-[10px] text-muted-foreground truncate">B2B Aggregator</p>
-          </div>
-        )}
-        <button onClick={() => setCollapsed(!collapsed)} className="text-muted-foreground hover:text-foreground p-1 mx-auto">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      </div>
+    <>
+      {/* Mobile Backdrop */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileMenuOpen?.(false)}
+        />
+      )}
 
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden">
-        {items.map(item => (
-          <button
-            key={item.id}
-            onClick={() => setView(item.id)}
-            title={item.label}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition ${
-              view === item.id
-                ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                : 'text-sidebar-foreground hover:bg-sidebar-accent'
-            } ${collapsed ? 'justify-center px-0' : ''}`}
-          >
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+      {/* Sidebar Container */}
+      <aside 
+        className={`fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${collapsed ? 'w-16' : 'w-64'} bg-sidebar border-r border-sidebar-border flex flex-col h-full`}
+      >
+        <div className={`p-5 border-b border-sidebar-border flex items-center justify-between ${collapsed ? 'px-2' : ''}`}>
+          {!collapsed && (
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-1.5 h-6 bg-primary rounded-sm" />
+                <span className="text-sm font-bold tracking-tight">RIMIT</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground truncate">B2B Aggregator</p>
+            </div>
+          )}
+          <button onClick={() => setCollapsed(!collapsed)} className="hidden md:block text-muted-foreground hover:text-foreground p-1 mx-auto">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
-            {!collapsed && item.label}
           </button>
-        ))}
-      </nav>
+          <button onClick={() => setMobileMenuOpen?.(false)} className="md:hidden text-muted-foreground hover:text-foreground p-1">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden">
+          {items.map(item => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setView(item.id);
+                setMobileMenuOpen?.(false); // Auto close on mobile
+              }}
+              title={item.label}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition ${
+                view === item.id
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent'
+              } ${collapsed ? 'justify-center px-0' : ''}`}
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+              </svg>
+              {!collapsed && item.label}
+            </button>
+          ))}
+        </nav>
 
       <div className={`p-3 border-t border-sidebar-border ${collapsed ? 'text-center' : ''}`}>
         {!collapsed ? (
@@ -364,6 +388,7 @@ export function Sidebar({ profile, view, setView, onLogout }: {
         </div>
       )}
     </aside>
+    </>
   );
 }
 
