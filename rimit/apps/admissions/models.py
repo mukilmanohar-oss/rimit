@@ -40,7 +40,7 @@ class Student(TenantOwnedModel):
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True)
     primary_phone = models.CharField(max_length=20, db_index=True)
     email = models.EmailField(blank=True, db_index=True)
-    aadhar_hash = models.CharField(max_length=64, db_index=True,
+    aadhar_hash = models.CharField(max_length=64, unique=True,
                                     help_text='SHA-256 hash of salted Aadhar number')
     address_data = models.JSONField(default=dict, blank=True)
     data_subject_consent = models.JSONField(

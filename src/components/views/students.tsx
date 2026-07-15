@@ -274,7 +274,7 @@ function StudentRegistrationForm({ onBack, onCancel }: { onBack: () => void; onC
   }, []);
 
   const handleAadharBlur = async () => {
-    const clean = form.aadhar_number.replace(/\\s/g, '');
+    const clean = form.aadhar_number.replace(/\s/g, '');
     if (clean.length !== 12) return;
     try {
       const res = await admissions.checkAadhar(clean);
@@ -294,7 +294,8 @@ function StudentRegistrationForm({ onBack, onCancel }: { onBack: () => void; onC
     const phoneValid = /^[0-9]{10}$/.test(form.primary_phone);
     const emailValid = form.email ? /^[^@]+@[^@]+\.[^@]+$/.test(form.email) : true;
     const aadharValid = form.aadhar_number.replace(/\s/g, '').length === 12;
-    return form.full_name && form.dob && phoneValid && emailValid && aadharValid && form.course_id && consentGiven;
+    return form.full_name && form.dob && phoneValid && emailValid
+        && aadharValid && !aadharWarning && form.course_id && consentGiven;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -340,7 +341,16 @@ function StudentRegistrationForm({ onBack, onCancel }: { onBack: () => void; onC
       toast.success(`✓ ${student.full_name} registered successfully.`);
       setTimeout(() => onBack(), 1500);
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      const apiError = err.response?.data;
+      const aadharErr = apiError?.aadhar_number;
+      if (aadharErr) {
+        setAadharWarning(Array.isArray(aadharErr) ? aadharErr[0] : String(aadharErr));
+      }
+      setError(
+        typeof apiError === 'object' && apiError !== null
+          ? JSON.stringify(apiError)
+          : err.message || 'Registration failed'
+      );
       toast.error('Registration failed. Please check the form errors.');
     } finally {
       setSubmitting(false);
