@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { aggregator, admissions, rules, type Course, type University, type IntakeSession, type Student, type UserProfile, type FeeStructure } from '@/lib/api';
+import { useEffect, useRef, useState } from 'react';
+import { aggregator, admissions, rules, DEFAULT_PAGE_SIZE, type Course, type University, type IntakeSession, type Student, type UserProfile, type FeeStructure } from '@/lib/api';
 import { can } from '@/lib/permissions';
 import { PageHeader, LoadingState, ErrorState, EmptyState } from '../rimit-shell';
 import { toast } from 'sonner';
@@ -13,6 +13,9 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const requestIdRef = useRef(0);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,26 +30,44 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
   // Enroll Modal state
   const [enrollCourse, setEnrollCourse] = useState<Course | null>(null);
   const [enrollForm, setEnrollForm] = useState({ student: '', session: '' });
-  const [preflightResult, setPreflightResult] = useState<{ valid: boolean; reason?: string } | null>(null);
   const [validating, setValidating] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
 
+  const preflightResult = (enrollCourse && enrollForm.student && enrollForm.session)
+    ? { valid: true, reason: '' }
+    : null;
+
   const loadFilterData = async () => {
     try {
-      const [unisData, sessionsData, studentsData] = await Promise.all([
-        aggregator.listUniversities({ is_active: 'true' }),
-        rules.listIntakeSessions({ is_active: 'true' }),
-        admissions.listStudents({ is_active: 'true' }),
+      const fetchAll = async <T,>(
+        fetchPage: (page: number) => Promise<{ results: T[]; next: string | null }>,
+        maxPages: number = 5
+      ): Promise<T[]> => {
+        const results: T[] = [];
+        for (let p = 1; p <= maxPages; p++) {
+          const data = await fetchPage(p);
+          results.push(...(data.results || []));
+          if (!data.next) break;
+        }
+        return results;
+      };
+
+      const [unis, sess, studs] = await Promise.all([
+        fetchAll<University>((p) => aggregator.listUniversities({ is_active: 'true', page: String(p), page_size: '200' })),
+        rules.listIntakeSessions({ is_active: 'true', page_size: '200' }),
+        fetchAll<Student>((p) => admissions.listStudents({ is_active: 'true', page: String(p), page_size: '200' })),
       ]);
-      setUniversities(unisData.results);
-      setSessions(sessionsData.results);
-      setStudents(studentsData.results);
+
+      setUniversities(unis);
+      setSessions((sess as any).results || []);
+      setStudents(studs);
     } catch (err) {
       console.error('Failed to load filter metadata', err);
     }
   };
 
   const loadCourses = async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -54,17 +75,33 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
       if (searchQuery) params.search = searchQuery;
       if (uniFilter) params.university = uniFilter;
       if (maxBudget) params.budget_max = maxBudget;
-      
-      const data = await aggregator.listCourses(params);
-      
+
+      // Fetch multiple backend pages (bounded) so client-side filters don't hide unseen results.
+      const all: Course[] = [];
+      for (let p = 1; p <= 5; p++) {
+        const data = await aggregator.listCourses({ ...params, page: String(p), page_size: '200' });
+        all.push(...(data.results || []));
+        if (!data.next) break;
+      }
+
+      if (requestId !== requestIdRef.current) return;
+
       // Client-side filtering for streams and duration since backend doesn't support array filters for stream
-      let filtered = data.results;
+      let filtered = all;
       if (streams.length > 0) {
         filtered = filtered.filter(c => streams.includes(c.stream));
       }
       filtered = filtered.filter(c => c.duration_months <= maxDuration);
 
-      setCourses(filtered);
+      const total = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(total / DEFAULT_PAGE_SIZE));
+      const safePage = Math.min(page, totalPages);
+      if (safePage !== page) setPage(safePage);
+      const start = (safePage - 1) * DEFAULT_PAGE_SIZE;
+      const paged = filtered.slice(start, start + DEFAULT_PAGE_SIZE);
+
+      setTotalCount(total);
+      setCourses(paged);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to search courses');
     } finally {
@@ -73,22 +110,14 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadFilterData();
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadCourses();
-  }, [searchQuery, uniFilter, streams, maxDuration, maxBudget]); // eslint-disable-line
-
-  // Run validation when enroll modal selections change
-  useEffect(() => {
-    if (enrollCourse && enrollForm.student && enrollForm.session) {
-      // Validation disabled per user request
-      setPreflightResult({ valid: true, reason: '' });
-    } else {
-      setPreflightResult(null);
-    }
-  }, [enrollForm.student, enrollForm.session, enrollCourse]);
+  }, [searchQuery, uniFilter, streams, maxDuration, maxBudget, page]);
 
   const handleQuickEnroll = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,12 +143,12 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
   const handleDownloadProspectus = async (course: Course) => {
     try {
       // 1) Try course-mapped prospectus
-      let docs = await aggregator.listProspectus({ course: course.id, doc_type: 'prospectus', is_public: 'true', limit: '1' });
+      let docs = await aggregator.listProspectus({ course: course.id, doc_type: 'prospectus', is_public: 'true', page_size: '1' });
       let doc = docs.results?.[0];
 
       // 2) Fallback: university-level prospectus
       if (!doc) {
-        docs = await aggregator.listProspectus({ university: course.university, doc_type: 'prospectus', is_public: 'true', limit: '1' });
+        docs = await aggregator.listProspectus({ university: course.university, doc_type: 'prospectus', is_public: 'true', page_size: '1' });
         doc = docs.results?.[0];
       }
 
@@ -140,6 +169,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
     setStreams(prev =>
       prev.includes(stream) ? prev.filter(s => s !== stream) : [...prev, stream]
     );
+    setPage(1);
   };
 
   const getStreamBadgeColor = (stream: string) => {
@@ -169,7 +199,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
             <label className="block text-xs font-semibold text-muted-foreground">University</label>
             <select
               value={uniFilter}
-              onChange={e => setUniFilter(e.target.value)}
+              onChange={e => { setUniFilter(e.target.value); setPage(1); }}
               className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">All Universities</option>
@@ -209,7 +239,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
               max="60"
               step="3"
               value={maxDuration}
-              onChange={e => setMaxDuration(Number(e.target.value))}
+              onChange={e => { setMaxDuration(Number(e.target.value)); setPage(1); }}
               className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
             <div className="flex justify-between text-[10px] text-muted-foreground px-1">
@@ -229,7 +259,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                 type="number"
                 placeholder="E.g., 100000"
                 value={maxBudget}
-                onChange={e => setMaxBudget(e.target.value)}
+                onChange={e => { setMaxBudget(e.target.value); setPage(1); }}
                 className="w-full pl-7 pr-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring font-medium"
               />
             </div>
@@ -247,7 +277,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
               type="text"
               placeholder="Search courses by name, keywords, eligibility requirements..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
               className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-border bg-card text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
@@ -256,7 +286,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
             <LoadingState />
           ) : error ? (
             <ErrorState message={error} />
-          ) : courses.length === 0 ? (
+          ) : totalCount === 0 ? (
             <EmptyState message="No courses match search criteria" />
           ) : (
             <div className="space-y-4">
@@ -356,6 +386,27 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                   </div>
                 );
               })}
+              <div className="flex items-center justify-between py-2">
+                <span className="text-xs text-muted-foreground">
+                  Page {page} of {Math.max(1, Math.ceil(totalCount / DEFAULT_PAGE_SIZE))} (Total {totalCount} records)
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={page >= Math.ceil(totalCount / DEFAULT_PAGE_SIZE)}
+                    className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -374,7 +425,6 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                 onClick={() => {
                   setEnrollCourse(null);
                   setEnrollForm({ student: '', session: '' });
-                  setPreflightResult(null);
                 }}
                 className="text-muted-foreground hover:text-foreground"
               >

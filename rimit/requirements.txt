@@ -51,3 +51,5 @@ safety>=3.0
 
 # Production
 gunicorn>=22.0
+
+psycopg2-binary>=2.9

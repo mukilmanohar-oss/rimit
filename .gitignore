@@ -52,3 +52,9 @@ prompt
 server.log
 # Skills directory
 /skills/
+# rimit/__pycache__/*
+# rimit/**/__pycache__/*.*
+# rimit/apps/admissions/__pycache__/*
+*.pyc
+# rimit/apps/admissions/__pycache__/views.cpython-312.pyc
+rimit/tests/*

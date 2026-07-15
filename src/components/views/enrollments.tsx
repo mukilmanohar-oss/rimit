@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { admissions, aggregator, rules, finance, type Enrollment, type UserProfile } from '@/lib/api';
+import { admissions, aggregator, rules, finance, DEFAULT_PAGE_SIZE, type Enrollment, type UserProfile } from '@/lib/api';
 import { PageHeader, LoadingState, ErrorState, EmptyState, StatusBadge } from '../rimit-shell';
 import { usePermissions } from '@/lib/permissions';
 import { exportToCSV } from '@/lib/utils';
@@ -14,6 +14,7 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
+  const [admissionTypeFilter, setAdmissionTypeFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingEnrollment, setEditingEnrollment] = useState<Enrollment | null>(null);
   const [selected, setSelected] = useState<Enrollment | null>(null);
@@ -28,6 +29,7 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
     try {
       const params: Record<string, string> = { page: String(page) };
       if (statusFilter) params.status = statusFilter;
+      if (admissionTypeFilter) params.admission_type = admissionTypeFilter;
       const data = await admissions.listEnrollments(params);
       setEnrollments(data.results);
       setTotalCount(data.count);
@@ -41,12 +43,13 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
   useEffect(() => { load(); }, [page]); // eslint-disable-line
 
   const handleExportCSV = () => {
-    const headers = ['Student Name', 'Course Name', 'University Name', 'Session', 'Status', 'Created At'];
+    const headers = ['Student Name', 'Course Name', 'University Name', 'Session', 'Admission Type', 'Status', 'Created At'];
     const rows = enrollments.map(e => [
       e.student_name || '',
       e.course_name || '',
       e.university_name || '',
       e.session_name || '',
+      (e as any).admission_type || '',
       e.status,
       new Date(e.created_at).toLocaleDateString('en-IN')
     ]);
@@ -58,19 +61,20 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
   }
 
   if (selected) {
-    return <EnrollmentDetail 
-      enrollment={selected} 
-      onBack={() => { setSelected(null); load(); }} 
+    return <EnrollmentDetail
+      enrollment={selected}
+      profile={profile}
+      onBack={() => { setSelected(null); load(); }}
       onEdit={() => { setEditingEnrollment(selected); setSelected(null); }}
       canUpdate={canUpdate}
     />;
   }
 
   if (editingEnrollment) {
-    return <EnrollmentEditForm 
-      enrollment={editingEnrollment} 
-      onBack={() => { setEditingEnrollment(null); setSelected(editingEnrollment); load(); }} 
-      onCancel={() => { setEditingEnrollment(null); setSelected(editingEnrollment); }} 
+    return <EnrollmentEditForm
+      enrollment={editingEnrollment}
+      onBack={() => { setEditingEnrollment(null); setSelected(editingEnrollment); load(); }}
+      onCancel={() => { setEditingEnrollment(null); setSelected(editingEnrollment); }}
     />;
   }
 
@@ -89,7 +93,7 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
         )}
       />
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex gap-3 mb-4 flex-wrap">
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -103,6 +107,15 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
           <option value="Enrolled">Enrolled</option>
           <option value="Enrollment Generated">Enrollment Generated</option>
           <option value="Cancelled">Cancelled</option>
+        </select>
+        <select
+          value={admissionTypeFilter}
+          onChange={(e) => setAdmissionTypeFilter(e.target.value)}
+          className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+        >
+          <option value="">All admission types</option>
+          <option value="fresh">Fresh</option>
+          <option value="lateral">Lateral</option>
         </select>
         <button
           onClick={() => { setPage(1); load(); }}
@@ -128,6 +141,7 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Student</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Course</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Session</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Admission Type</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Created</th>
                     <th className="px-4 py-3"></th>
@@ -143,6 +157,7 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
                       <td className="px-4 py-3 font-medium text-foreground">{e.student_name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{e.course_name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{e.session_name}</td>
+                      <td className="px-4 py-3 text-muted-foreground capitalize">{(e as any).admission_type || '—'}</td>
                       <td className="px-4 py-3"><StatusBadge status={e.status} /></td>
                       <td className="px-4 py-3 text-muted-foreground">{new Date(e.created_at).toLocaleDateString('en-IN')}</td>
                       <td className="px-4 py-3 text-primary text-xs">View →</td>
@@ -154,7 +169,7 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
 
             <div className="flex items-center justify-between py-2">
               <span className="text-xs text-muted-foreground">
-                Page {page} of {Math.max(1, Math.ceil(totalCount / 25))} (Total {totalCount} records)
+                Page {page} of {Math.max(1, Math.ceil(totalCount / DEFAULT_PAGE_SIZE))} (Total {totalCount} records)
               </span>
               <div className="flex gap-2">
                 <button
@@ -166,7 +181,7 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
                 </button>
                 <button
                   onClick={() => setPage(p => p + 1)}
-                  disabled={page * 25 >= totalCount}
+                  disabled={page * DEFAULT_PAGE_SIZE >= totalCount}
                   className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
                 >
                   Next
@@ -180,15 +195,115 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
   );
 }
 
-function EnrollmentDetail({ enrollment, onBack, onEdit, canUpdate }: { enrollment: Enrollment; onBack: () => void; onEdit: () => void; canUpdate: boolean }) {
+// ─── Status Transition Modal ────────────────────────────────────────────────
+function StatusTransitionModal({
+  targetStatus,
+  onConfirm,
+  onCancel,
+}: {
+  targetStatus: string;
+  onConfirm: (extra: Record<string, string>) => void;
+  onCancel: () => void;
+}) {
+  const [admissionNumber, setAdmissionNumber] = useState('');
+  const [registrationNumber, setRegistrationNumber] = useState('');
+
+  const needsAdmissionNumber = targetStatus === 'Enrolled';
+  const needsRegistrationNumber = targetStatus === 'Enrollment Generated';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-background border border-border p-6 rounded-lg shadow-lg max-w-sm w-full">
+        <h3 className="text-lg font-bold mb-2">Transition to: {targetStatus}</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          {needsAdmissionNumber && 'Please enter the Admission Number to proceed.'}
+          {needsRegistrationNumber && 'Please enter the Registration Number to proceed.'}
+          {!needsAdmissionNumber && !needsRegistrationNumber && 'Confirm this status transition.'}
+        </p>
+
+        {needsAdmissionNumber && (
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Admission Number *
+            </label>
+            <input
+              type="text"
+              value={admissionNumber}
+              onChange={(e) => setAdmissionNumber(e.target.value)}
+              className="w-full border border-border bg-background text-foreground p-2 rounded-md text-sm"
+              placeholder="e.g. ADM/2025/001"
+              autoFocus
+            />
+          </div>
+        )}
+
+        {needsRegistrationNumber && (
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Registration Number *
+            </label>
+            <input
+              type="text"
+              value={registrationNumber}
+              onChange={(e) => setRegistrationNumber(e.target.value)}
+              className="w-full border border-border bg-background text-foreground p-2 rounded-md text-sm"
+              placeholder="e.g. REG/2025/001"
+              autoFocus
+            />
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-sm font-medium border border-border hover:bg-muted rounded-md"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              const extra: Record<string, string> = {};
+              if (needsAdmissionNumber && admissionNumber) extra.admission_number = admissionNumber;
+              if (needsRegistrationNumber && registrationNumber) extra.registration_number = registrationNumber;
+              onConfirm(extra);
+            }}
+            disabled={
+              (needsAdmissionNumber && !admissionNumber) ||
+              (needsRegistrationNumber && !registrationNumber)
+            }
+            className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md disabled:opacity-50"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Enrollment Detail ───────────────────────────────────────────────────────
+function EnrollmentDetail({
+  enrollment, profile, onBack, onEdit, canUpdate,
+}: {
+  enrollment: Enrollment;
+  profile: UserProfile;
+  onBack: () => void;
+  onEdit: () => void;
+  canUpdate: boolean;
+}) {
   const [detail, setDetail] = useState<Enrollment>(enrollment);
   const [timeline, setTimeline] = useState<any[]>([]);
-const [transitioning, setTransitioning] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
   const [showMockPayment, setShowMockPayment] = useState(false);
   const [mockAmount, setMockAmount] = useState("30000");
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cancelDialog, setCancelDialog] = useState(false);
+  const [pendingTransition, setPendingTransition] = useState<string | null>(null);
+
+  // Statuses restricted to super_admin only
+  const SUPER_ADMIN_ONLY_STATUSES = ['Fee Paid', 'Enrolled', 'Enrollment Generated'];
+  const isSuperAdmin = profile.role === 'super_admin';
 
   const loadTimeline = async () => {
     try {
@@ -201,7 +316,7 @@ const [transitioning, setTransitioning] = useState(false);
 
   useEffect(() => { loadTimeline(); }, []); // eslint-disable-line
 
-const handleMockPayment = async () => {
+  const handleMockPayment = async () => {
     if (!detail) return;
     setPaymentLoading(true);
     setError(null);
@@ -220,11 +335,11 @@ const handleMockPayment = async () => {
     }
   };
 
-  const transition = async (newStatus: string) => {
+  const doTransition = async (newStatus: string, extra: Record<string, string> = {}) => {
     setTransitioning(true);
     setError(null);
     try {
-      const updated = await admissions.transitionStatus(detail.id, newStatus);
+      const updated = await admissions.transitionStatus(detail.id, newStatus, extra);
       setDetail(updated);
       loadTimeline();
       toast.success(`Enrollment transitioned to ${newStatus}`);
@@ -253,32 +368,46 @@ const handleMockPayment = async () => {
     }
   };
 
+  const handleTransitionClick = (newStatus: string) => {
+    // Check RBAC: only super_admin can trigger these statuses
+    if (SUPER_ADMIN_ONLY_STATUSES.includes(newStatus) && !isSuperAdmin) {
+      toast.error(`Only Super Admin can transition to "${newStatus}".`);
+      return;
+    }
+    // Statuses that need extra input get a modal
+    if (newStatus === 'Enrolled' || newStatus === 'Enrollment Generated') {
+      setPendingTransition(newStatus);
+    } else {
+      doTransition(newStatus);
+    }
+  };
+
   return (
     <div>
       <button onClick={onBack} className="text-sm text-primary mb-4 hover:underline">
         ← Back to enrollments
       </button>
-      <PageHeader 
-        title="Enrollment Detail" 
-        subtitle={detail.enrollment_number || `ID: ${detail.id.slice(0, 8)}`} 
+      <PageHeader
+        title="Enrollment Detail"
+        subtitle={detail.enrollment_number || `ID: ${detail.id.slice(0, 8)}`}
         action={
           <div className="flex gap-2">
             {canUpdate && (
               <button
-              onClick={onEdit}
-              className="border border-border text-foreground hover:bg-muted rounded-md px-3 py-1.5 text-sm font-medium"
-            >
-              Edit 
+                onClick={onEdit}
+                className="border border-border text-foreground hover:bg-muted rounded-md px-3 py-1.5 text-sm font-medium"
+              >
+                Edit
               </button>
             )}
             {canUpdate && (
               <button
-              onClick={() => setCancelDialog(true)}
-              className="bg-destructive text-white hover:bg-destructive/90 rounded-md px-3 py-1.5 text-sm font-medium"
-              disabled={detail.status === 'Cancelled'}
-            >
-              Cancel Enrollment
-            </button>
+                onClick={() => setCancelDialog(true)}
+                className="bg-destructive text-white hover:bg-destructive/90 rounded-md px-3 py-1.5 text-sm font-medium"
+                disabled={detail.status === 'Cancelled'}
+              >
+                Cancel Enrollment
+              </button>
             )}
           </div>
         }
@@ -306,9 +435,25 @@ const handleMockPayment = async () => {
                 <dd className="font-medium text-foreground">{detail.session_name}</dd>
               </div>
               <div>
+                <dt className="text-xs text-muted-foreground">Admission Type</dt>
+                <dd className="font-medium text-foreground capitalize">{(detail as any).admission_type || '—'}</dd>
+              </div>
+              <div>
                 <dt className="text-xs text-muted-foreground">Current Status</dt>
                 <dd><StatusBadge status={detail.status} /></dd>
               </div>
+              {(detail as any).admission_number && (
+                <div>
+                  <dt className="text-xs text-muted-foreground">Admission Number</dt>
+                  <dd className="font-medium text-foreground">{(detail as any).admission_number}</dd>
+                </div>
+              )}
+              {detail.enrollment_number && (
+                <div>
+                  <dt className="text-xs text-muted-foreground">Enrollment/Registration Number</dt>
+                  <dd className="font-medium text-foreground">{detail.enrollment_number}</dd>
+                </div>
+              )}
               <div>
                 <dt className="text-xs text-muted-foreground">Created</dt>
                 <dd className="font-medium text-foreground">{new Date(detail.created_at).toLocaleString('en-IN')}</dd>
@@ -338,18 +483,7 @@ const handleMockPayment = async () => {
                 </button>
               </div>
             )}
-            {detail.status === 'Fee Pending' && (
-              <div className="mb-4">
-                <button
-                  onClick={() => setShowMockPayment(true)}
-                  className="w-full bg-emerald-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-emerald-700 transition"
-                >
-                  Simulate Payment Capture (Mock)
-                </button>
-              </div>
-            )}
             <div className="space-y-2">
-              {/* Status flow visualization */}
               {['Applied', 'Document Verified', 'Fee Pending', 'Fee Paid', 'Enrolled', 'Enrollment Generated'].map(s => {
                 const isCurrent = detail.status === s;
                 const isPast = ['Applied', 'Document Verified', 'Fee Pending', 'Fee Paid', 'Enrolled', 'Enrollment Generated'].indexOf(s) <
@@ -364,33 +498,36 @@ const handleMockPayment = async () => {
                   >
                     <span className={`w-2 h-2 rounded-full ${isCurrent ? 'bg-primary' : isPast ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />
                     {s}
+                    {SUPER_ADMIN_ONLY_STATUSES.includes(s) && (
+                      <span className="ml-auto text-[9px] bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded">Admin only</span>
+                    )}
                   </div>
                 );
               })}
             </div>
 
-                    {canUpdate && detail.next_valid_statuses && detail.next_valid_statuses.length > 0 && (
+            {canUpdate && detail.next_valid_statuses && detail.next_valid_statuses.length > 0 && (
               <div className="mt-4 pt-4 border-t border-border space-y-2">
                 <p className="text-xs text-muted-foreground">Available transitions:</p>
-                {detail.next_valid_statuses.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => transition(s)}
-                    disabled={transitioning}
-                    className="w-full text-left bg-primary text-primary-foreground rounded-md px-3 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
-                  >
-                    → {s}
-                  </button>
-                ))}
-                {detail.next_valid_statuses.includes('Cancelled') && (
-                  <button
-                    onClick={() => transition('Cancelled')}
-                    disabled={transitioning}
-                    className="w-full text-left bg-destructive text-white rounded-md px-3 py-2 text-sm font-medium hover:bg-destructive/90 disabled:opacity-50"
-                  >
-                    × Cancel Enrollment
-                  </button>
-                )}
+                {detail.next_valid_statuses.filter(s => s !== 'Cancelled').map(s => {
+                  const isRestricted = SUPER_ADMIN_ONLY_STATUSES.includes(s) && !isSuperAdmin;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => handleTransitionClick(s)}
+                      disabled={transitioning || isRestricted}
+                      title={isRestricted ? 'Only Super Admin can perform this transition' : undefined}
+                      className={`w-full text-left rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50 ${
+                        isRestricted
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                          : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      }`}
+                    >
+                      → {s}
+                      {isRestricted && ' 🔒'}
+                    </button>
+                  );
+                })}
               </div>
             )}
             {detail.status === 'Cancelled' && (
@@ -426,14 +563,14 @@ const handleMockPayment = async () => {
           </div>
         </div>
       </div>
-      
+
       <ConfirmDialog
         open={cancelDialog}
         onOpenChange={setCancelDialog}
         title="Cancel Enrollment?"
         description="Are you sure you want to cancel this enrollment? This action will mark it as cancelled (soft delete) and stop any further processing."
         onConfirm={() => {
-          transition('Cancelled');
+          doTransition('Cancelled');
           setCancelDialog(false);
         }}
         confirmText="Cancel Enrollment"
@@ -471,15 +608,28 @@ const handleMockPayment = async () => {
           </div>
         </div>
       )}
+
+      {pendingTransition && (
+        <StatusTransitionModal
+          targetStatus={pendingTransition}
+          onConfirm={(extra) => {
+            const status = pendingTransition;
+            setPendingTransition(null);
+            doTransition(status, extra);
+          }}
+          onCancel={() => setPendingTransition(null)}
+        />
+      )}
     </div>
   );
 }
 
+// ─── Enrollment Create Form ──────────────────────────────────────────────────
 function EnrollmentCreateForm({ onBack, onCancel }: { onBack: () => void; onCancel: () => void }) {
   const [students, setStudents] = useState<Array<{ id: string; full_name: string; primary_phone: string }>>([]);
   const [courses, setCourses] = useState<Array<{ id: string; name: string; university_name?: string }>>([]);
   const [sessions, setSessions] = useState<Array<{ id: string; session_name: string; is_fresh_allowed: boolean }>>([]);
-  const [form, setForm] = useState({ student: '', course: '', session: '' });
+  const [form, setForm] = useState({ student: '', course: '', session: '', admission_type: '' });
   const [validation, setValidation] = useState<{ valid: boolean; reason?: string; suggested?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -488,9 +638,9 @@ function EnrollmentCreateForm({ onBack, onCancel }: { onBack: () => void; onCanc
     (async () => {
       try {
         const [s, c, sess] = await Promise.all([
-          admissions.listStudents(),
-          aggregator.listCourses(),
-          rules.listIntakeSessions({ is_active: 'True' }),
+          admissions.listStudents({ page_size: '200' }),
+          aggregator.listCourses({ page_size: '200' }),
+          rules.listIntakeSessions({ is_active: 'True', page_size: '200' }),
         ]);
         setStudents(s.results);
         setCourses(c.results);
@@ -521,7 +671,6 @@ function EnrollmentCreateForm({ onBack, onCancel }: { onBack: () => void; onCanc
       setTimeout(() => onBack(), 800);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Enrollment creation failed';
-      // DRF returns field errors as JSON: {"session":["reason..."],"suggested_session":["uuid"]}
       try {
         const parsed = JSON.parse(msg);
         if (parsed.session) {
@@ -581,6 +730,20 @@ function EnrollmentCreateForm({ onBack, onCancel }: { onBack: () => void; onCanc
           />
         </div>
 
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Admission Type *</label>
+          <select
+            value={form.admission_type}
+            onChange={(e) => setForm(p => ({ ...p, admission_type: e.target.value }))}
+            className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+            required
+          >
+            <option value="">Select admission type…</option>
+            <option value="fresh">Fresh</option>
+            <option value="lateral">Lateral</option>
+          </select>
+        </div>
+
         {validation && (
           <div className={`rounded-md p-3 text-sm border ${
             validation.valid
@@ -620,8 +783,10 @@ function EnrollmentCreateForm({ onBack, onCancel }: { onBack: () => void; onCanc
   );
 }
 
+// ─── Enrollment Edit Form ────────────────────────────────────────────────────
 function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enrollment; onBack: () => void; onCancel: () => void }) {
-  const [notes, setNotes] = useState(enrollment.notes || "");
+  const [notes, setNotes] = useState(enrollment.notes || '');
+  const [admissionType, setAdmissionType] = useState((enrollment as any).admission_type || '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -630,12 +795,12 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
     setSubmitting(true);
     setError(null);
     try {
-      await admissions.updateEnrollment(enrollment.id, { notes });
-      toast.success(`? Enrollment updated successfully.`);
+      await admissions.updateEnrollment(enrollment.id, { notes, admission_type: admissionType });
+      toast.success('✓ Enrollment updated successfully.');
       setTimeout(() => onBack(), 800);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Enrollment update failed");
-      toast.error("Enrollment update failed.");
+      setError(err instanceof Error ? err.message : 'Enrollment update failed');
+      toast.error('Enrollment update failed.');
     } finally {
       setSubmitting(false);
     }
@@ -643,13 +808,25 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
 
   return (
     <div>
-      <button onClick={onCancel} className="text-sm text-primary mb-4 hover:underline">? Back to enrollments</button>
+      <button onClick={onCancel} className="text-sm text-primary mb-4 hover:underline">← Back to enrollments</button>
       <PageHeader title="Edit Enrollment" subtitle={`Editing enrollment ID: ${enrollment.id.slice(0, 8)}`} />
 
       {error && <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 text-sm text-destructive mb-4">{error}</div>}
 
       <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-6 space-y-4 max-w-2xl">
-        
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Admission Type</label>
+          <select
+            value={admissionType}
+            onChange={(e) => setAdmissionType(e.target.value)}
+            className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+          >
+            <option value="">Select admission type…</option>
+            <option value="fresh">Fresh</option>
+            <option value="lateral">Lateral</option>
+          </select>
+        </div>
+
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">Notes</label>
           <textarea
@@ -666,7 +843,7 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
             disabled={submitting}
             className="bg-primary text-primary-foreground rounded-md px-6 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
           >
-            {submitting ? "Saving�" : "Save Changes"}
+            {submitting ? 'Saving…' : 'Save Changes'}
           </button>
           <button
             type="button"
@@ -680,4 +857,3 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
     </div>
   );
 }
-

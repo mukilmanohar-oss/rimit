@@ -17,7 +17,7 @@ export function CheckoutView({ profile }: { profile: UserProfile }) {
     try {
       // Fetch only students in 'Pending Payment' state
       // (Using lead_status param as implemented in our backend search/filter)
-      const data = await admissions.listStudents({ lead_status: 'Pending Payment', limit: '100' });
+      const data = await admissions.listStudents({ lead_status: 'Pending Payment', page_size: '200' });
       setStudents(data.results);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load pending payments');

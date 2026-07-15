@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { aggregator, type University, type UniversityDoc, type UserProfile, type Course } from '@/lib/api';
+import { aggregator, DEFAULT_PAGE_SIZE, withPaging, hasNextPage, hasPrevPage, type University, type UniversityDoc, type UserProfile, type Course } from '@/lib/api';
 import { PageHeader, LoadingState, ErrorState, EmptyState } from '../rimit-shell';
 import { toast } from 'sonner';
 
@@ -11,6 +11,10 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [canNext, setCanNext] = useState(false);
+  const [canPrev, setCanPrev] = useState(false);
   
   // Filters
   const [uniFilter, setUniFilter] = useState('');
@@ -46,11 +50,14 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
       if (search) params.search = search;
 
       const [docsData, unisData] = await Promise.all([
-        aggregator.listProspectus(params),
-        aggregator.listUniversities({ is_active: 'true' }),
+        aggregator.listProspectus(withPaging(params, { page, pageSize: DEFAULT_PAGE_SIZE })),
+        aggregator.listUniversities({ is_active: 'true', page_size: '200' }),
       ]);
 
       setDocs(docsData.results);
+      setTotalCount(docsData.count || 0);
+      setCanNext(hasNextPage(docsData));
+      setCanPrev(hasPrevPage(docsData));
       setUniversities(unisData.results);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load documents');
@@ -60,19 +67,28 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
-  }, [uniFilter, typeFilter, search]); // eslint-disable-line
+  }, [uniFilter, typeFilter, search, page]);
 
   // Load courses for selected university when editing/uploading
   useEffect(() => {
     if (!showForm || !form.university) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCourses([]);
       return;
     }
     (async () => {
       try {
-        const data = await aggregator.listCourses({ university: form.university, limit: '200' });
-        setCourses(data.results);
+        const results: Course[] = [];
+        let nextPage = 1;
+        for (let i = 0; i < 5; i++) {
+          const data = await aggregator.listCourses({ university: form.university, page: String(nextPage), page_size: '200' });
+          results.push(...(data.results || []));
+          if (!data.next) break;
+          nextPage += 1;
+        }
+        setCourses(results);
       } catch {
         setCourses([]);
       }
@@ -221,12 +237,12 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
             type="text"
             placeholder="Search documents..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
             className="px-3 py-2 rounded-md border border-input bg-background text-sm min-w-[200px]"
           />
           <select
             value={uniFilter}
-            onChange={e => setUniFilter(e.target.value)}
+            onChange={e => { setUniFilter(e.target.value); setPage(1); }}
             className="px-3 py-2 rounded-md border border-input bg-background text-sm min-w-[180px]"
           >
             <option value="">All Universities</option>
@@ -236,7 +252,7 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
           </select>
           <select
             value={typeFilter}
-            onChange={e => setTypeFilter(e.target.value)}
+            onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
             className="px-3 py-2 rounded-md border border-input bg-background text-sm"
           >
             <option value="">All Document Types</option>
@@ -313,6 +329,30 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {docs.length > 0 && (
+        <div className="flex items-center justify-between py-2">
+          <span className="text-xs text-muted-foreground">
+            Page {page} of {Math.max(1, Math.ceil(totalCount / DEFAULT_PAGE_SIZE))} (Total {totalCount} records)
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={!canPrev || page === 1}
+              className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage(p => p + 1)}
+              disabled={!canNext}
+              className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
 

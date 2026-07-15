@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { aggregator, type University, type Course, type UserProfile, type FeeStructure } from '@/lib/api';
+import { aggregator, DEFAULT_PAGE_SIZE, withPaging, hasNextPage, hasPrevPage, type University, type Course, type UserProfile, type FeeStructure } from '@/lib/api';
 import { PageHeader, LoadingState, ErrorState, EmptyState, ConfirmDialog } from '../rimit-shell';
 import { usePermissions } from '@/lib/permissions';
 
@@ -14,6 +14,10 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
   const [selected, setSelected] = useState<University | null>(null);
   const [search, setSearch] = useState('');
   const [stateFilter, setStateFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [canNext, setCanNext] = useState(false);
+  const [canPrev, setCanPrev] = useState(false);
 
   // Add University form state
   const [showAddUni, setShowAddUni] = useState(false);
@@ -29,15 +33,18 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
 
   const { canCreate, canUpdate, canDelete } = usePermissions(profile.role, 'university');
 
-  const load = async () => {
+  const load = async (targetPage: number = page) => {
     setLoading(true);
     setError(null);
     try {
       const params: Record<string, string> = {};
       if (search) params.search = search;
       if (stateFilter) params.state = stateFilter;
-      const data = await aggregator.listUniversities(params);
+      const data = await aggregator.listUniversities(withPaging(params, { page: targetPage, pageSize: DEFAULT_PAGE_SIZE }));
       setUniversities(data.results);
+      setTotalCount(data.count || 0);
+      setCanNext(hasNextPage(data));
+      setCanPrev(hasPrevPage(data));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load universities');
     } finally {
@@ -45,7 +52,12 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
     }
   };
 
-  useEffect(() => { load(); }, []); // eslint-disable-line
+  useEffect(() => { load(); }, [page]); // eslint-disable-line
+
+  const triggerSearch = () => {
+    if (page === 1) load(1);
+    else setPage(1);
+  };
 
   const handleCreateUni = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,7 +227,7 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
           placeholder="Search by name, accreditation…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && load()}
+          onKeyDown={(e) => e.key === 'Enter' && triggerSearch()}
           className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <input
@@ -223,11 +235,11 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
           placeholder="State"
           value={stateFilter}
           onChange={(e) => setStateFilter(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && load()}
+          onKeyDown={(e) => e.key === 'Enter' && triggerSearch()}
           className="w-40 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <button
-          onClick={load}
+          onClick={triggerSearch}
           className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90"
         >
           Search
@@ -237,39 +249,63 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
       {universities.length === 0 ? (
         <EmptyState message="No universities found" />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {universities.map(u => (
-            <div
-              key={u.id}
-              className="bg-card rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md hover:border-primary/50 relative border-border"
-            >
-              <div onClick={() => setSelected(u)}>
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-semibold text-lg text-foreground pr-8 leading-tight">{u.name}</h3>
-                  <span className="text-xs bg-muted px-2 py-1 rounded text-muted-foreground whitespace-nowrap">
-                    {u.state}
-                  </span>
-                </div>
-                {u.accreditation && (
-                  <div className="text-xs text-muted-foreground mb-3 font-medium bg-muted/50 inline-block px-2 py-0.5 rounded">
-                    {u.accreditation}
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {universities.map(u => (
+              <div
+                key={u.id}
+                className="bg-card rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md hover:border-primary/50 relative border-border"
+              >
+                <div onClick={() => setSelected(u)}>
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-semibold text-lg text-foreground pr-8 leading-tight">{u.name}</h3>
+                    <span className="text-xs bg-muted px-2 py-1 rounded text-muted-foreground whitespace-nowrap">
+                      {u.state}
+                    </span>
                   </div>
-                )}
-                {u.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">{u.description}</p>
-                )}
+                  {u.accreditation && (
+                    <div className="text-xs text-muted-foreground mb-3 font-medium bg-muted/50 inline-block px-2 py-0.5 rounded">
+                      {u.accreditation}
+                    </div>
+                  )}
+                  {u.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">{u.description}</p>
+                  )}
+                </div>
+                {canUpdate ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleEditClick(u); }}
+                    className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                    title="Edit University"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                  </button>
+                ) : null}
               </div>
-              {canUpdate ? (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleEditClick(u); }}
-                  className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
-                  title="Edit University"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                </button>
-              ) : null}
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between py-2">
+            <span className="text-xs text-muted-foreground">
+              Page {page} of {Math.max(1, Math.ceil(totalCount / DEFAULT_PAGE_SIZE))} (Total {totalCount} records)
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={!canPrev || page === 1}
+                className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={!canNext}
+                className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
+              >
+                Next
+              </button>
             </div>
-          ))}
+          </div>
         </div>
       )}
     </div>

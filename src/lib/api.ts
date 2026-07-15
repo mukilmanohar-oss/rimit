@@ -11,6 +11,8 @@
 const API_BASE = '/api/v1';
 const TRANSFORM_PORT = '8000';
 
+export const DEFAULT_PAGE_SIZE = 25;
+
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('rimit_token');
@@ -82,6 +84,24 @@ export interface Paginated<T> {
   next: string | null;
   previous: string | null;
   results: T[];
+}
+
+export function withPaging(
+  params: Record<string, string> | undefined,
+  paging: { page?: number; pageSize?: number }
+): Record<string, string> {
+  const next: Record<string, string> = { ...(params || {}) };
+  if (paging.page !== undefined) next.page = String(paging.page);
+  if (paging.pageSize !== undefined) next.page_size = String(paging.pageSize);
+  return next;
+}
+
+export function hasNextPage<T>(paginated: Paginated<T> | null | undefined): boolean {
+  return Boolean(paginated?.next);
+}
+
+export function hasPrevPage<T>(paginated: Paginated<T> | null | undefined): boolean {
+  return Boolean(paginated?.previous);
 }
 
 export interface University {
@@ -202,6 +222,23 @@ export interface Ticket {
   created_at: string;
 }
 
+export interface StudentAddressBlock {
+  perm_domicile_type?: string;
+  domicile_state?: string;
+  perm_address?: string;
+  perm_country?: string;
+  perm_state?: string;
+  perm_district?: string;
+  perm_city?: string;
+  perm_pincode?: string;
+  corr_address?: string;
+  corr_country?: string;
+  corr_state?: string;
+  corr_district?: string;
+  corr_city?: string;
+  corr_pincode?: string;
+}
+
 export interface Student {
   id: string;
   sub_center: string;
@@ -212,8 +249,13 @@ export interface Student {
   primary_phone: string;
   email?: string;
   parent_name?: string;
+  father_name?: string;
+  mother_name?: string;
   parent_phone?: string;
+  alternate_phone?: string;
+  alternate_email?: string;
   address_data?: Record<string, any>;
+  address_block?: StudentAddressBlock;
   is_active: boolean;
   enrollment_count?: number;
   lead_status?: string;
@@ -227,6 +269,16 @@ export interface Student {
   data_subject_consent?: Record<string, unknown>;
   academic_histories?: StudentAcademicHistory[];
   documents?: StudentDoc[];
+  // Demographic fields
+  category?: string;
+  employment_status?: string;
+  marital_status?: string;
+  religion?: string;
+  abc_id?: string;
+  deb_id?: string;
+  receipt_s3_url?: string;
+  admission_type?: string;
+  admission_semester?: string;
   created_at: string;
 }
 
@@ -234,11 +286,14 @@ export interface StudentAcademicHistory {
   id: string;
   student: string;
   qualification: string;
+  examination?: string;
   institution: string;
   board_university: string;
   year_of_passing: number;
   score_type: string;
   score_value: string;
+  percentage_marks?: string;
+  result?: string;
   subject_stream?: string;
   created_at?: string;
 }
@@ -270,6 +325,9 @@ export interface Enrollment {
   session: string;
   session_name?: string;
   status: string;
+  admission_type?: string;
+  admission_number?: string;
+  registration_number?: string;
   next_valid_statuses?: string[];
   enrollment_number?: string;
   notes?: string;
@@ -465,10 +523,10 @@ export const admissions = {
     apiFetch<Enrollment>('/enrollments', { method: 'POST', body: JSON.stringify(data) }),
   updateEnrollment: (id: string, data: Record<string, unknown>) =>
     apiFetch<Enrollment>(`/enrollments/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-  transitionStatus: (id: string, status: string, notes?: string) =>
+  transitionStatus: (id: string, status: string, extra?: Record<string, string>) =>
     apiFetch<Enrollment>(`/enrollments/${id}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status, notes }),
+      body: JSON.stringify({ status, ...extra }),
     }),
   enrollmentTimeline: (id: string) =>
     apiFetch<Array<{ action_type: string; created_at: string; old_data: Record<string, unknown>; new_data: Record<string, unknown> }>>(`/enrollments/${id}/timeline`),

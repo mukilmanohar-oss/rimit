@@ -207,12 +207,16 @@ class StudentDoc(UUIDModel, TimeStampedModel):
     CATEGORY_EXPERIENCE = 'experience'
     CATEGORY_PHOTO = 'photo'
     CATEGORY_OTHER = 'other'
+    CATEGORY_ABC_ID = 'abc_id'
+    CATEGORY_DEB_ID = 'deb_id'
     CATEGORY_CHOICES = [
         (CATEGORY_IDENTITY, 'Identity Proof'),
         (CATEGORY_MARKLIST, 'Marklist / Certificate'),
         (CATEGORY_MIGRATION, 'Migration Certificate'),
         (CATEGORY_EXPERIENCE, 'Experience Certificate'),
         (CATEGORY_PHOTO, 'Passport Photo'),
+        (CATEGORY_ABC_ID, 'ABC ID'),
+        (CATEGORY_DEB_ID, 'DEB ID'),
         (CATEGORY_OTHER, 'Other'),
     ]
 
@@ -292,6 +296,16 @@ class Enrollment(TenantOwnedModel):
         (STATUS_CANCELLED, 'Cancelled'),
     ]
 
+    ADMISSION_TYPE_FRESH = 'fresh'
+    ADMISSION_TYPE_LATERAL = 'lateral'
+    ADMISSION_TYPE_CHOICES = [
+        (ADMISSION_TYPE_FRESH, 'Fresh'),
+        (ADMISSION_TYPE_LATERAL, 'Lateral'),
+    ]
+
+    # Super-admin-only statuses
+    SUPER_ADMIN_ONLY_STATUSES = [STATUS_FEE_PAID, STATUS_ENROLLED, STATUS_ENROLLMENT_GENERATED]
+
     # Valid status transitions (state machine)
     TRANSITIONS = {
         STATUS_APPLIED: [STATUS_DOC_VERIFIED, STATUS_CANCELLED],
@@ -313,6 +327,9 @@ class Enrollment(TenantOwnedModel):
         'rules.IntakeSession', on_delete=models.PROTECT, related_name='enrollments'
     )
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_APPLIED, db_index=True)
+    admission_type = models.CharField(max_length=20, choices=ADMISSION_TYPE_CHOICES, blank=True, db_index=True)
+    admission_number = models.CharField(max_length=100, blank=True, help_text='Assigned when status transitions to Enrolled')
+    registration_number = models.CharField(max_length=100, blank=True, help_text='Assigned when status transitions to Enrollment Generated')
     enrollment_number = models.CharField(max_length=50, unique=True, null=True, blank=True)
     notes = models.TextField(blank=True)
     rejected_reason = models.TextField(blank=True)

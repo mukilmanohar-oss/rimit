@@ -33,13 +33,21 @@ export function LeadMonitorView({ profile }: { profile: UserProfile }) {
       if (sourceFilter) params.source = sourceFilter;
       if (search) params.search = search;
 
-      const data = await leads.list(params);
+      const data = await leads.list({ ...params, page_size: '200' });
       setLogs(data.results);
 
       // Compute statistics based on unfiltered list or fetch separately.
       // Since it's paginated, we'll fetch all leads for stats computation (or simulate stats from results in dev)
-      const allData = await leads.list({ limit: '1000' }).catch(() => ({ results: [] }));
-      const results = allData.results || [];
+      const results: LeadIngestionLog[] = [];
+      // Fetch multiple pages for accurate stats, bounded for safety.
+      let nextPage = 1;
+      for (let i = 0; i < 5; i++) {
+        const pageData = await leads.list({ page: String(nextPage), page_size: '200' }).catch(() => ({ results: [] } as any));
+        if (!pageData?.results?.length) break;
+        results.push(...pageData.results);
+        if (!pageData.next) break;
+        nextPage += 1;
+      }
       const computed = results.reduce(
         (acc, curr) => {
           acc.total += 1;
@@ -60,8 +68,9 @@ export function LeadMonitorView({ profile }: { profile: UserProfile }) {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
-  }, [statusFilter, sourceFilter, search]); // eslint-disable-line
+  }, [statusFilter, sourceFilter, search]);
 
   const handleConvert = async (leadId: string) => {
     try {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { partners, type SubCenter, type UserProfile } from '@/lib/api';
+import { partners, DEFAULT_PAGE_SIZE, withPaging, hasNextPage, hasPrevPage, type SubCenter, type UserProfile } from '@/lib/api';
 import { PageHeader, LoadingState, ErrorState, EmptyState, StatusBadge } from '../rimit-shell';
 import { usePermissions } from '@/lib/permissions';
 
@@ -10,6 +10,10 @@ export function SubCentersView({ profile }: { profile: UserProfile }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [canNext, setCanNext] = useState(false);
+  const [canPrev, setCanPrev] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingCenter, setEditingCenter] = useState<SubCenter | null>(null);
 
@@ -32,8 +36,11 @@ export function SubCentersView({ profile }: { profile: UserProfile }) {
     try {
       const params: Record<string, string> = {};
       if (statusFilter) params.status = statusFilter;
-      const data = await partners.listSubCenters(params);
+      const data = await partners.listSubCenters(withPaging(params, { page, pageSize: DEFAULT_PAGE_SIZE }));
       setSubCenters(data.results);
+      setTotalCount(data.count || 0);
+      setCanNext(hasNextPage(data));
+      setCanPrev(hasPrevPage(data));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load sub-centers');
     } finally {
@@ -41,7 +48,7 @@ export function SubCentersView({ profile }: { profile: UserProfile }) {
     }
   };
 
-  useEffect(() => { load(); }, [statusFilter]); // eslint-disable-line
+  useEffect(() => { load(); }, [statusFilter, page]); // eslint-disable-line
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,7 +246,7 @@ export function SubCentersView({ profile }: { profile: UserProfile }) {
       <div className="flex gap-3 mb-4 max-w-xs">
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
         >
           <option value="">All Statuses</option>
@@ -251,58 +258,82 @@ export function SubCentersView({ profile }: { profile: UserProfile }) {
 
       {loading ? <LoadingState /> : error ? <ErrorState message={error} /> :
         subCenters.length === 0 ? <EmptyState message="No sub-centers found" /> : (
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/30 border-b border-border">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Code</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Name</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Location</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Contact</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Commission %</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {subCenters.map(sc => (
-                  <tr key={sc.id} className="hover:bg-muted/20">
-                    <td className="px-4 py-3 font-bold text-foreground">{sc.center_code}</td>
-                    <td className="px-4 py-3 text-foreground font-medium">{sc.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {sc.location}{sc.state ? `, ${sc.state}` : ''}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground space-y-0.5">
-                      <div>{sc.contact_phone || '—'}</div>
-                      <div>{sc.contact_email || '—'}</div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {sc.commission_percent !== undefined && sc.commission_percent !== null ? (
-                        <span className="font-semibold text-foreground">{Number(sc.commission_percent).toFixed(2)}%</span>
-                      ) : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={sc.status} />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {canUpdate && (
-                        <>
-                          <button onClick={() => handleEdit(sc)} className="text-primary text-sm hover:underline mr-4">Edit</button>
-                          {sc.status !== 'terminated' && (
-                            <button
-                              onClick={() => handleStatusChange(sc.id, sc.status)}
-                              className="text-xs text-primary hover:underline font-semibold"
-                            >
-                              {sc.status === 'active' ? 'Suspend' : 'Activate'}
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </td>
+          <div className="space-y-3">
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30 border-b border-border">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Code</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Name</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Location</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Contact</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Commission %</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
+                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {subCenters.map(sc => (
+                    <tr key={sc.id} className="hover:bg-muted/20">
+                      <td className="px-4 py-3 font-bold text-foreground">{sc.center_code}</td>
+                      <td className="px-4 py-3 text-foreground font-medium">{sc.name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {sc.location}{sc.state ? `, ${sc.state}` : ''}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground space-y-0.5">
+                        <div>{sc.contact_phone || '—'}</div>
+                        <div>{sc.contact_email || '—'}</div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {sc.commission_percent !== undefined && sc.commission_percent !== null ? (
+                          <span className="font-semibold text-foreground">{Number(sc.commission_percent).toFixed(2)}%</span>
+                        ) : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={sc.status} />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {canUpdate && (
+                          <>
+                            <button onClick={() => handleEdit(sc)} className="text-primary text-sm hover:underline mr-4">Edit</button>
+                            {sc.status !== 'terminated' && (
+                              <button
+                                onClick={() => handleStatusChange(sc.id, sc.status)}
+                                className="text-xs text-primary hover:underline font-semibold"
+                              >
+                                {sc.status === 'active' ? 'Suspend' : 'Activate'}
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-between py-2">
+              <span className="text-xs text-muted-foreground">
+                Page {page} of {Math.max(1, Math.ceil(totalCount / DEFAULT_PAGE_SIZE))} (Total {totalCount} records)
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={!canPrev || page === 1}
+                  className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={!canNext}
+                  className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         )
       }

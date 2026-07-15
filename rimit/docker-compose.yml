@@ -9,7 +9,7 @@ services:
     volumes:
       - ./:/app
     env_file: .env
-    # depends_on: [db, redis, keycloak]
+    depends_on: [db]
     ports:
       - '8000:8000'
     environment:
@@ -20,13 +20,16 @@ services:
       context: ../
       dockerfile: Dockerfile.frontend
     ports:
-      - '80:3000'
+      - '3000:3000'
     depends_on: [app]
+    volumes:
+      - ../src:/app/src
+      - ../public:/app/public
     environment:
       - PORT=3000
       - API_URL=http://app:8000
-    command: >
-      /bin/sh -c "sed -i 's|http://127.0.0.1:8000|http://app:8000|g' .next/routes-manifest.json && bun .next/standalone/server.js"
+      - NEXT_PUBLIC_API_URL=http://app:8000
+    command: bun run dev
 
 #  celery:
 #    build: .
@@ -48,16 +51,16 @@ services:
 #    environment:
 #      DJANGO_SETTINGS_MODULE: config.settings.dev
 #
-#  db:
-#    image: postgres:16
-#    environment:
-#      POSTGRES_DB: rimit
-#      POSTGRES_USER: rimit
-#      POSTGRES_PASSWORD: dev
-#    volumes:
-#      - pgdata:/var/lib/postgresql/data
-#    ports:
-#      - '5432:5432'
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: rimit
+      POSTGRES_USER: rimit
+      POSTGRES_PASSWORD: dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
 #
 #  redis:
 #    image: redis:7

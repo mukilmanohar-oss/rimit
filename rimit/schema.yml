@@ -294,11 +294,13 @@ paths:
           - Open Schooling
           - Postgraduate
           - Undergraduate
+          - Certification
         description: |-
           * `Undergraduate` - Undergraduate
           * `Postgraduate` - Postgraduate
           * `Diploma` - Diploma
           * `Open Schooling` - Open Schooling
+          * `Certification` - Certification
       - in: query
         name: university
         schema:

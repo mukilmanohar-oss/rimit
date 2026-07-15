@@ -309,17 +309,43 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
                 Address Details
               </h3>
               <div className="text-sm bg-muted/30 p-4 rounded-md border border-border">
-                {student.address_data && Object.keys(student.address_data).length > 0 ? (
+                {student.address_block?.perm_address ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1 font-semibold uppercase tracking-wider">Permanent Address</p>
+                      <p className="text-foreground">{student.address_block.perm_address}</p>
+                      <p className="text-muted-foreground mt-1">
+                        {[student.address_block.perm_city, student.address_block.perm_district].filter(Boolean).join(', ')}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {[student.address_block.perm_state, student.address_block.perm_pincode].filter(Boolean).join(' — ')}
+                      </p>
+                      <p className="text-muted-foreground">{student.address_block.perm_country}</p>
+                    </div>
+                    {student.address_block.corr_address && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1 font-semibold uppercase tracking-wider">Correspondence Address</p>
+                        <p className="text-foreground">{student.address_block.corr_address}</p>
+                        <p className="text-muted-foreground mt-1">
+                          {[student.address_block.corr_city, student.address_block.corr_district].filter(Boolean).join(', ')}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {[student.address_block.corr_state, student.address_block.corr_pincode].filter(Boolean).join(' — ')}
+                        </p>
+                        <p className="text-muted-foreground">{student.address_block.corr_country}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : student.address_data && Object.keys(student.address_data).length > 0 ? (
+                  // Legacy fallback: old address_data JSON blob
                   <div>
-                    <p className="text-foreground">{student.address_data.line1 || 'No address line 1'}</p>
+                    <p className="text-foreground">{student.address_data.line1 || student.address_data.perm_address || 'No address line'}</p>
                     <p className="text-muted-foreground mt-1">
-                      {student.address_data.city && `${student.address_data.city}, `}
-                      {student.address_data.state && `${student.address_data.state} - `}
-                      {student.address_data.pincode}
+                      {student.address_data.city || student.address_data.perm_city}{student.address_data.state ? `, ${student.address_data.state || student.address_data.perm_state}` : ''}{student.address_data.pincode ? ` — ${student.address_data.pincode || student.address_data.perm_pincode}` : ''}
                     </p>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">No address recorded</p>
+                  <p className="text-muted-foreground italic">No address recorded</p>
                 )}
               </div>
             </div>
@@ -529,6 +555,8 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
                   <option value="migration">Migration Certificate</option>
                   <option value="experience">Experience Certificate</option>
                   <option value="photo">Passport Photo</option>
+                  <option value="abc_id">ABC ID</option>
+                  <option value="deb_id">DEB ID</option>
                   <option value="other">Other Document</option>
                 </select>
               </div>
@@ -642,6 +670,14 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
                             )}
                           </>
                         )}
+                        <a
+                          href={d.s3_object_uri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-blue-600 text-white rounded px-2.5 py-1 text-xs font-medium hover:bg-blue-700 inline-block"
+                        >
+                          View
+                        </a>
                         {canDeleteDoc && (
                           <button
                             onClick={() => setDocToDelete(d.id)}

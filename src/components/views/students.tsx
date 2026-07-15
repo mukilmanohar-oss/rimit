@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { admissions, aggregator, finance, type Student, type UserProfile } from '@/lib/api';
+import { admissions, aggregator, finance, DEFAULT_PAGE_SIZE, type Student, type UserProfile } from '@/lib/api';
 import { PageHeader, LoadingState, ErrorState, EmptyState, StatusBadge } from '../rimit-shell';
 import { usePermissions } from '@/lib/permissions';
 import { StudentDetail } from './student-detail';
@@ -180,6 +180,8 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">DOB</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Course</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Sub-center</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">ABC ID</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">DEB ID</th>
                     <th className="text-right px-4 py-3 font-medium text-muted-foreground">Status</th>
                   </tr>
                 </thead>
@@ -203,6 +205,8 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
                       <td className="px-4 py-3">
                         <span className="text-xs bg-muted px-2 py-0.5 rounded">{s.sub_center_code || '-'}</span>
                       </td>
+                      <td className="px-4 py-3 text-muted-foreground">{s.abc_id || '-'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{s.deb_id || '-'}</td>
                       <td className="px-4 py-3 text-right">
                         <StatusBadge status={s.lead_status || 'Pending Payment'} />
                       </td>
@@ -214,7 +218,7 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
 
             <div className="flex items-center justify-between py-2">
               <span className="text-xs text-muted-foreground">
-                Page {page} of {Math.max(1, Math.ceil(totalCount / 25))} (Total {totalCount} records)
+                Page {page} of {Math.max(1, Math.ceil(totalCount / DEFAULT_PAGE_SIZE))} (Total {totalCount} records)
               </span>
               <div className="flex gap-2">
                 <button
@@ -226,7 +230,7 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
                 </button>
                 <button
                   onClick={() => setPage(p => p + 1)}
-                  disabled={page >= Math.ceil(totalCount / 25)}
+                  disabled={page >= Math.ceil(totalCount / DEFAULT_PAGE_SIZE)}
                   className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
                 >
                   Next

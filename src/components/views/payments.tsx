@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { finance, type PaymentLedger, type UserProfile } from '@/lib/api';
+import { finance, DEFAULT_PAGE_SIZE, type PaymentLedger, type UserProfile } from '@/lib/api';
 import { PageHeader, LoadingState, ErrorState, EmptyState, StatusBadge } from '../rimit-shell';
 import { can } from '@/lib/permissions';
 import { exportToCSV } from '@/lib/utils';
@@ -230,7 +230,7 @@ export function PaymentsView({ profile }: { profile: UserProfile }) {
 
             <div className="flex items-center justify-between py-2">
               <span className="text-xs text-muted-foreground">
-                Page {page} of {Math.max(1, Math.ceil(totalCount / 25))} (Total {totalCount} records)
+                Page {page} of {Math.max(1, Math.ceil(totalCount / DEFAULT_PAGE_SIZE))} (Total {totalCount} records)
               </span>
               <div className="flex gap-2">
                 <button
@@ -242,7 +242,7 @@ export function PaymentsView({ profile }: { profile: UserProfile }) {
                 </button>
                 <button
                   onClick={() => setPage(p => p + 1)}
-                  disabled={page * 25 >= totalCount}
+                  disabled={page * DEFAULT_PAGE_SIZE >= totalCount}
                   className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
                 >
                   Next

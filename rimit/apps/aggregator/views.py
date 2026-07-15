@@ -78,6 +78,7 @@ class CourseViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
     filterset_fields = ['university', 'stream', 'is_active']
     search_fields = ['name', 'stream', 'eligibility_text', 'university__name']
     ordering_fields = ['name', 'stream', 'duration_months', 'created_at']
+    ordering = ('name', 'id')
 
     def get_serializer_class(self):
         if self.action == 'list':

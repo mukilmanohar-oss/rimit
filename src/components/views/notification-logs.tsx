@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { notifications, type NotificationLog, type UserProfile } from '@/lib/api';
+import { notifications, DEFAULT_PAGE_SIZE, type NotificationLog, type UserProfile } from '@/lib/api';
 import { PageHeader, LoadingState, ErrorState, EmptyState, StatusBadge } from '../rimit-shell';
 import { exportToCSV } from '@/lib/utils';
 
@@ -34,10 +34,9 @@ export function NotificationLogsView({ profile }: { profile: UserProfile }) {
   };
 
   useEffect(() => {
-    setPage(1);
-  }, [channelFilter, statusFilter]);
-
-  useEffect(() => { load(); }, [page, channelFilter, statusFilter]); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [page, channelFilter, statusFilter]);
 
   const handleExportCSV = () => {
     const headers = ['Date', 'Recipient', 'Channel', 'Template ID', 'Status', 'Retries', 'Message / Error'];
@@ -66,7 +65,7 @@ export function NotificationLogsView({ profile }: { profile: UserProfile }) {
             <label className="block text-xs font-medium text-muted-foreground mb-1">Filter Channel</label>
             <select
               value={channelFilter}
-              onChange={(e) => setChannelFilter(e.target.value)}
+              onChange={(e) => { setChannelFilter(e.target.value); setPage(1); }}
               className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
             >
               <option value="">All Channels</option>
@@ -80,7 +79,7 @@ export function NotificationLogsView({ profile }: { profile: UserProfile }) {
             <label className="block text-xs font-medium text-muted-foreground mb-1">Filter Status</label>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
             >
               <option value="">All Statuses</option>
@@ -166,7 +165,7 @@ export function NotificationLogsView({ profile }: { profile: UserProfile }) {
 
             <div className="flex items-center justify-between py-2">
               <span className="text-xs text-muted-foreground">
-                Page {page} of {Math.max(1, Math.ceil(totalCount / 25))} (Total {totalCount} records)
+                Page {page} of {Math.max(1, Math.ceil(totalCount / DEFAULT_PAGE_SIZE))} (Total {totalCount} records)
               </span>
               <div className="flex gap-2">
                 <button
@@ -178,7 +177,7 @@ export function NotificationLogsView({ profile }: { profile: UserProfile }) {
                 </button>
                 <button
                   onClick={() => setPage(p => p + 1)}
-                  disabled={page * 25 >= totalCount}
+                  disabled={page * DEFAULT_PAGE_SIZE >= totalCount}
                   className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
                 >
                   Next

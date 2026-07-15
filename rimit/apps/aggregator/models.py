@@ -136,12 +136,13 @@ class FeeStructure(UUIDModel, TimeStampedModel):
         (FEE_LIBRARY, 'Library Fee'),
         (FEE_LAB, 'Lab Fee'),
         (FEE_OTHER, 'Other'),
+        ('', 'Unspecified'),
     ]
 
     course = models.ForeignKey(
         Course, on_delete=models.CASCADE, related_name='fees'
     )
-    fee_type = models.CharField(max_length=30, choices=FEE_TYPE_CHOICES, db_index=True)
+    fee_type = models.CharField(max_length=30, choices=FEE_TYPE_CHOICES, db_index=True, blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3, default='INR')
     is_active = models.BooleanField(default=True)

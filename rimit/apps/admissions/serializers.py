@@ -262,6 +262,8 @@ class EnrollmentStatusTransitionSerializer(serializers.Serializer):
     """Serializer for status transition PATCH."""
     status = serializers.CharField()
     notes = serializers.CharField(required=False, allow_blank=True)
+    admission_number = serializers.CharField(required=False, allow_blank=True)
+    registration_number = serializers.CharField(required=False, allow_blank=True)
 
     def validate_status(self, value):
         from apps.admissions.models import Enrollment

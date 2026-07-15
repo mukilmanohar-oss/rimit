@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { UserProfile, admissions, type Student } from '@/lib/api';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { UserProfile, admissions, DEFAULT_PAGE_SIZE, withPaging, hasNextPage, hasPrevPage, type Student, type Paginated } from '@/lib/api';
 
 export function LeadsView({ profile }: { profile: UserProfile }) {
   const [leads, setLeads] = useState<any[]>([]);
@@ -7,15 +7,25 @@ export function LeadsView({ profile }: { profile: UserProfile }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [canNext, setCanNext] = useState(false);
+  const [canPrev, setCanPrev] = useState(false);
+  const requestIdRef = useRef(0);
 
   const fetchLeads = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     try {
       // lead_status != Converted to get only active leads. Wait, our API might not have `lead_status__ne`. Let's just fetch pending and followed-up.
       // Usually the API filters on lead_status. Let's just pass search.
-      const res = await admissions.listStudents({ search, page: page.toString(), lead_status: 'Pending' });
+      const params = withPaging({ search, lead_status: 'Pending' }, { page, pageSize: DEFAULT_PAGE_SIZE });
+      const res = await admissions.listStudents(params);
+
+      if (requestId !== requestIdRef.current) return;
+
       setLeads(res.results || []);
-      setTotalPages(Math.ceil((res.count || 0) / 20) || 1);
+      setTotalPages(Math.max(1, Math.ceil((res.count || 0) / DEFAULT_PAGE_SIZE)));
+      setCanNext(hasNextPage(res));
+      setCanPrev(hasPrevPage(res));
     } catch (e: any) {
       console.error(e);
       // Fallback for mocked server response during development
@@ -133,14 +143,14 @@ export function LeadsView({ profile }: { profile: UserProfile }) {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
+              disabled={!canPrev || page === 1}
               className="px-3 py-1.5 rounded-md border border-border hover:bg-muted disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
             >
               Previous
             </button>
             <button 
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
+              disabled={!canNext || page === totalPages}
               className="px-3 py-1.5 rounded-md border border-border hover:bg-muted disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
             >
               Next

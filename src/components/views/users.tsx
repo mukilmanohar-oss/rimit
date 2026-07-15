@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { partners, admissions, type SystemUser, type SubCenter, type UserProfile } from '@/lib/api';
+import { partners, admissions, DEFAULT_PAGE_SIZE, withPaging, hasNextPage, hasPrevPage, type SystemUser, type SubCenter, type UserProfile } from '@/lib/api';
 import { PageHeader, LoadingState, ErrorState, EmptyState } from '../rimit-shell';
 import { usePermissions } from '@/lib/permissions';
 
@@ -12,6 +12,10 @@ export function UsersView({ profile }: { profile: UserProfile }) {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [canNext, setCanNext] = useState(false);
+  const [canPrev, setCanPrev] = useState(false);
 
   // Form state
   const [form, setForm] = useState({
@@ -30,10 +34,13 @@ export function UsersView({ profile }: { profile: UserProfile }) {
     setError(null);
     try {
       const [uData, scData] = await Promise.all([
-        partners.listUsers(),
-        partners.listSubCenters(),
+        partners.listUsers(withPaging(undefined, { page, pageSize: DEFAULT_PAGE_SIZE })),
+        partners.listSubCenters({ page_size: '200' }),
       ]);
       setUsers(uData.results);
+      setTotalCount(uData.count || 0);
+      setCanNext(hasNextPage(uData));
+      setCanPrev(hasPrevPage(uData));
       setSubCenters(scData.results);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load users');
@@ -42,7 +49,7 @@ export function UsersView({ profile }: { profile: UserProfile }) {
     }
   };
 
-  useEffect(() => { load(); }, []); // eslint-disable-line
+  useEffect(() => { load(); }, [page]); // eslint-disable-line
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,45 +256,69 @@ export function UsersView({ profile }: { profile: UserProfile }) {
 
       {loading ? <LoadingState /> : error ? <ErrorState message={error} /> :
         users.length === 0 ? <EmptyState message="No users found" /> : (
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/30 border-b border-border">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Username</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Email</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Phone</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Role</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Sub-center</th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {users.map(u => (
-                  <tr key={u.id} className="hover:bg-muted/20">
-                    <td className="px-4 py-3 font-bold text-foreground">{u.username || '—'}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{u.phone || '—'}</td>
-                    <td className="px-4 py-3 text-foreground font-semibold">
-                      {roleLabel[u.role] || u.role}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded">{u.sub_center_code || 'Global / HQ'}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {canUpdate && <button onClick={() => handleEdit(u)} className="text-primary text-sm hover:underline mr-4">Edit</button>}
-                      {canDelete && profile.user_id !== Number(u.id) && (
-                        <button
-                          onClick={() => handleDelete(u.id)}
-                          className="text-xs text-destructive hover:underline font-semibold"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </td>
+          <div className="space-y-3">
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30 border-b border-border">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Username</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Email</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Phone</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Role</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Sub-center</th>
+                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {users.map(u => (
+                    <tr key={u.id} className="hover:bg-muted/20">
+                      <td className="px-4 py-3 font-bold text-foreground">{u.username || '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{u.phone || '—'}</td>
+                      <td className="px-4 py-3 text-foreground font-semibold">
+                        {roleLabel[u.role] || u.role}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs bg-muted px-2 py-0.5 rounded">{u.sub_center_code || 'Global / HQ'}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {canUpdate && <button onClick={() => handleEdit(u)} className="text-primary text-sm hover:underline mr-4">Edit</button>}
+                        {canDelete && profile.user_id !== Number(u.id) && (
+                          <button
+                            onClick={() => handleDelete(u.id)}
+                            className="text-xs text-destructive hover:underline font-semibold"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-between py-2">
+              <span className="text-xs text-muted-foreground">
+                Page {page} of {Math.max(1, Math.ceil(totalCount / DEFAULT_PAGE_SIZE))} (Total {totalCount} records)
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={!canPrev || page === 1}
+                  className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={!canNext}
+                  className="px-3 py-1 text-xs border border-border rounded hover:bg-muted disabled:opacity-50 font-medium"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         )
       }

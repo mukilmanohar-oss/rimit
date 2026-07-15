@@ -28,6 +28,7 @@ class StudentViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
     filterset_fields = ['sub_center', 'is_active', 'gender', 'lead_status']
     search_fields = ['full_name', 'primary_phone', 'email', 'parent_name']
     ordering_fields = ['full_name', 'created_at', 'dob']
+    ordering = ('-created_at', 'id')
 
 
     def get_queryset(self):
@@ -163,7 +164,7 @@ class EnrollmentViewSet(AuditLogMixin, TenantAwareViewMixin, viewsets.ModelViewS
     serializer_class = EnrollmentSerializer
     resource_name = 'enrollment'
     permission_classes = [ResourcePermission]
-    filterset_fields = ['sub_center', 'status', 'session', 'course']
+    filterset_fields = ['sub_center', 'status', 'session', 'course', 'admission_type']
     search_fields = ['student__full_name', 'course__name', 'enrollment_number']
     ordering_fields = ['created_at', 'status']
 
@@ -184,7 +185,7 @@ class EnrollmentViewSet(AuditLogMixin, TenantAwareViewMixin, viewsets.ModelViewS
 
     @action(detail=True, methods=['patch'], url_path='status')
     def transition_status(self, request, pk=None):
-        """Transition enrollment status with state-machine validation."""
+        """Transition enrollment status with state-machine validation and RBAC."""
         enrollment = self.get_object()
         serializer = EnrollmentStatusTransitionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -196,17 +197,36 @@ class EnrollmentViewSet(AuditLogMixin, TenantAwareViewMixin, viewsets.ModelViewS
                 'allowed_transitions': Enrollment.TRANSITIONS.get(enrollment.status, []),
             }, status=400)
 
-        # Gap 5: Lock Counselor Status Transitions
+        # RBAC: determine caller's role
         from apps.common.permissions import _user_role
         role = _user_role(request)
+
+        # Counselors can only move to Document Verified or Cancelled
         if role == 'counselor':
-            # Counselors can only move to Document Verified or Cancelled from Applied
             if new_status not in [Enrollment.STATUS_DOC_VERIFIED, Enrollment.STATUS_CANCELLED]:
                 return Response({'detail': 'Counselors cannot manually transition past Document Verified.'}, status=403)
+
+        # Super-admin-only statuses: Fee Paid, Enrolled, Enrollment Generated
+        if new_status in Enrollment.SUPER_ADMIN_ONLY_STATUSES:
+            if role != 'super_admin':
+                return Response({
+                    'detail': f'Only Super Admin can transition to "{new_status}".'
+                }, status=403)
 
         old_status = enrollment.status
         old_data = self._snapshot(enrollment) if hasattr(self, '_snapshot') else {}
         enrollment.status = new_status
+
+        # Store admission number when transitioning to Enrolled
+        admission_number = serializer.validated_data.get('admission_number', '')
+        if new_status == Enrollment.STATUS_ENROLLED and admission_number:
+            enrollment.admission_number = admission_number
+
+        # Store registration number when transitioning to Enrollment Generated
+        registration_number = serializer.validated_data.get('registration_number', '')
+        if new_status == Enrollment.STATUS_ENROLLMENT_GENERATED and registration_number:
+            enrollment.registration_number = registration_number
+
         if serializer.validated_data.get('notes'):
             enrollment.notes = enrollment.notes + f"\n[{new_status}] {serializer.validated_data['notes']}"
         from django.core.exceptions import ValidationError
@@ -214,7 +234,7 @@ class EnrollmentViewSet(AuditLogMixin, TenantAwareViewMixin, viewsets.ModelViewS
             enrollment.save()
         except ValidationError as e:
             return Response(
-                e.message_dict if hasattr(e, 'message_dict') else {'detail': e.messages}, 
+                e.message_dict if hasattr(e, 'message_dict') else {'detail': e.messages},
                 status=400
             )
         # Write audit log explicitly since we bypassed perform_update
@@ -226,3 +246,4 @@ class EnrollmentViewSet(AuditLogMixin, TenantAwareViewMixin, viewsets.ModelViewS
         notify_enrollment_status_change.delay(str(enrollment.id), old_status, new_status)
 
         return Response(EnrollmentSerializer(enrollment).data)
+
