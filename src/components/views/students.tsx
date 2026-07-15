@@ -183,7 +183,10 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">Sub-center</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">ABC ID</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">DEB ID</th>
+                    {/* TODO: Status column hidden from Leads & Students table per product request. Filter, export, and underlying data are untouched — see feature/hide-student-status-column. */}
+                    {/*
                     <th className="text-right px-4 py-3 font-medium text-muted-foreground">Status</th>
+                    */}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -208,9 +211,12 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{s.abc_id || '-'}</td>
                       <td className="px-4 py-3 text-muted-foreground">{s.deb_id || '-'}</td>
+                      {/* TODO: Status badge cell hidden from Leads & Students table per product request. Filter, export, and underlying data are untouched — see feature/hide-student-status-column. */}
+                      {/*
                       <td className="px-4 py-3 text-right">
                         <StatusBadge status={s.lead_status || 'Pending Payment'} />
                       </td>
+                      */}
                     </tr>
                   ))}
                 </tbody>
