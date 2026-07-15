@@ -206,10 +206,11 @@ class UniversityDocVaultViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
     def download(self, request, pk=None):
         """Return presigned URL for document download (15-min TTL)."""
         doc = self.get_object()
-        # In prod: generate presigned URL via boto3/MinIO client
-        # For dev: return the s3_object_uri directly (no actual signing)
+        from apps.common.utils_storage import get_presigned_url
+        presigned_url = get_presigned_url(doc.s3_object_uri, expires_in=900)
+        
         return Response({
-            'url': doc.s3_object_uri,
+            'url': presigned_url,
             'ttl_seconds': 900,
             'expires_in': '15 minutes',
             'filename': doc.title,
