@@ -25,6 +25,7 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
   const [showForm, setShowForm] = useState(false);
   const [editingDoc, setEditingDoc] = useState<UniversityDoc | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Form State
   const [form, setForm] = useState({
@@ -152,6 +153,7 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
 
   const handleEdit = (doc: UniversityDoc) => {
     setEditingDoc(doc);
+    setSelectedFile(null);
     setForm({
       university: doc.university,
       course: doc.course || '',
@@ -179,6 +181,7 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       const mockUri = `s3://rimit-prospectus-vault/${Date.now()}_${file.name}`;
       setForm(prev => ({
         ...prev,
@@ -220,6 +223,7 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
             <button
               onClick={() => {
                 setEditingDoc(null);
+                setSelectedFile(null);
                 setForm({
                   university: '',
                   course: '',
@@ -376,6 +380,7 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
                 onClick={() => {
                   setShowForm(false);
                   setEditingDoc(null);
+                  setSelectedFile(null);
                 }}
                 className="text-muted-foreground hover:text-foreground"
               >
@@ -489,6 +494,7 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
                   onClick={() => {
                     setShowForm(false);
                     setEditingDoc(null);
+                    setSelectedFile(null);
                   }}
                   className="px-4 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground"
                 >
