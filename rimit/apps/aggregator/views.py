@@ -157,6 +157,33 @@ class UniversityDocVaultViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
     search_fields = ['title', 'university__name']
     ordering_fields = ['title', 'created_at']
 
+    def perform_create(self, serializer):
+        from apps.common.utils_storage import handle_file_upload
+        file_obj = self.request.FILES.get('file')
+        if file_obj:
+            uri = handle_file_upload(file_obj, directory=f"university/{self.request.data.get('university')}/")
+            serializer.save(
+                s3_object_uri=uri,
+                file_size_bytes=file_obj.size,
+                mime_type=file_obj.content_type or 'application/octet-stream'
+            )
+        else:
+            serializer.save()
+
+    def perform_update(self, serializer):
+        from apps.common.utils_storage import handle_file_upload
+        file_obj = self.request.FILES.get('file')
+        if file_obj:
+            doc = self.get_object()
+            uri = handle_file_upload(file_obj, directory=f"university/{doc.university_id}/")
+            serializer.save(
+                s3_object_uri=uri,
+                file_size_bytes=file_obj.size,
+                mime_type=file_obj.content_type or 'application/octet-stream'
+            )
+        else:
+            serializer.save()
+
     def get_queryset(self):
         """Prospectus library must respect the same visibility allow-list."""
         from apps.common.permissions import _user_role

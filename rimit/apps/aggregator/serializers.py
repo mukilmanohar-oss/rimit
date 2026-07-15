@@ -46,7 +46,7 @@ class UniversityDocVaultSerializer(serializers.ModelSerializer):
     class Meta:
         model = UniversityDocVault
         fields = '__all__'
-        read_only_fields = ('id', 'created_at', 'updated_at', 'uploaded_by')
+        read_only_fields = ('id', 'created_at', 'updated_at', 'uploaded_by', 's3_object_uri', 'file_size_bytes', 'mime_type')
 
     def create(self, validated_data):
         request = self.context.get('request')

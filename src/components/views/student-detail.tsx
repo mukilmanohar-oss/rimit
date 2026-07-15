@@ -109,15 +109,13 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
     setDocSubmitting(true);
     setError(null);
     try {
-      // Mocking S3 uploading by sending the expected payload to standard StudentDoc API
-      await admissions.createStudentDoc({
-        student: student.id,
-        doc_category: docForm.category,
-        title: docForm.title || selectedFile.name,
-        s3_object_uri: `s3://rimit-docs/students/${student.id}/${Date.now()}_${selectedFile.name}`,
-        file_size_bytes: selectedFile.size,
-        mime_type: selectedFile.type || 'application/pdf',
-      });
+      const formData = new FormData();
+      formData.append('student', student.id);
+      formData.append('doc_category', docForm.category);
+      formData.append('title', docForm.title || selectedFile.name);
+      formData.append('file', selectedFile);
+
+      await admissions.uploadStudentDoc(formData);
       setShowDocForm(false);
       setDocForm({ category: 'identity', title: '' });
       setSelectedFile(null);

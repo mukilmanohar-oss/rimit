@@ -40,6 +40,7 @@ const nextConfig: NextConfig = {
     return [
       { source: '/api/:path*', destination: `${apiUrl}/api/:path*` },
       { source: '/webhooks/:path*', destination: `${apiUrl}/webhooks/:path*` },
+      { source: '/media/:path*', destination: `${apiUrl}/media/:path*` },
     ];
   },
 };

@@ -33,3 +33,9 @@ urlpatterns = [
     path('api/v1/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/v1/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+if getattr(settings, 'USE_LOCAL_STORAGE', True):
+    urlpatterns += static(settings.MEDIA_URL, document_root=getattr(settings, 'LOCAL_STORAGE_PATH', settings.MEDIA_ROOT))

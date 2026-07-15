@@ -53,16 +53,16 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 }
 
 /** Upload helper — sends FormData instead of JSON */
-async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+async function apiUpload<T>(path: string, formData: FormData, method: string = 'POST'): Promise<T> {
   const token = getAuthToken();
   const sep = path.includes('?') ? '&' : '?';
   const url = `${API_BASE}${path}${sep}XTransformPort=${TRANSFORM_PORT}`;
 
-  const headers: Record<string, string> = {};
+  const headers: HeadersInit = {};
   if (token) headers['Authorization'] = `Token ${token}`;
-  // Do NOT set Content-Type — browser sets multipart boundary automatically
+  // DO NOT set Content-Type; browser will set multipart/form-data with boundary
 
-  const resp = await fetch(url, { method: 'POST', headers, body: formData });
+  const resp = await fetch(url, { method: method, headers, body: formData });
 
   if (resp.status === 401) {
     setAuthToken(null);
@@ -446,10 +446,10 @@ export const aggregator = {
   // Digital Prospectus Library
   listProspectus: (params?: Record<string, string>) =>
     apiFetch<Paginated<UniversityDoc>>(`/prospectus${qs(params)}`),
-  createProspectus: (data: Partial<UniversityDoc>) =>
-    apiFetch<UniversityDoc>('/prospectus', { method: 'POST', body: JSON.stringify(data) }),
-  updateProspectus: (id: string, data: Partial<UniversityDoc>) =>
-    apiFetch<UniversityDoc>(`/prospectus/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  createProspectus: (formData: FormData) =>
+    apiUpload<UniversityDoc>('/prospectus', formData),
+  updateProspectus: (id: string, formData: FormData) =>
+    apiUpload<UniversityDoc>(`/prospectus/${id}`, formData, 'PATCH'),
   deleteProspectus: (id: string) =>
     apiFetch<void>(`/prospectus/${id}`, { method: 'DELETE' }),
   downloadDoc: (id: string) =>

@@ -126,6 +126,33 @@ class StudentDocViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
     filterset_fields = ['student', 'status']
     search_fields = ['title', 'student__full_name']
 
+    def perform_create(self, serializer):
+        from apps.common.utils_storage import handle_file_upload
+        file_obj = self.request.FILES.get('file')
+        if file_obj:
+            uri = handle_file_upload(file_obj, directory=f"students/{self.request.data.get('student')}/")
+            serializer.save(
+                s3_object_uri=uri,
+                file_size_bytes=file_obj.size,
+                mime_type=file_obj.content_type or 'application/octet-stream'
+            )
+        else:
+            serializer.save()
+
+    def perform_update(self, serializer):
+        from apps.common.utils_storage import handle_file_upload
+        file_obj = self.request.FILES.get('file')
+        if file_obj:
+            doc = self.get_object()
+            uri = handle_file_upload(file_obj, directory=f"students/{doc.student_id}/")
+            serializer.save(
+                s3_object_uri=uri,
+                file_size_bytes=file_obj.size,
+                mime_type=file_obj.content_type or 'application/octet-stream'
+            )
+        else:
+            serializer.save()
+
     @action(detail=True, methods=['post'], permission_classes=[ResourcePermission])
     def verify(self, request, pk=None):
         """Mark a document as verified (super_admin / academic_head only)."""

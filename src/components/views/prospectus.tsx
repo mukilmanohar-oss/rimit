@@ -109,19 +109,29 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const payload = {
-        ...form,
-        course: form.course || null,
-      };
+      const formData = new FormData();
+      formData.append('university', form.university);
+      if (form.course) formData.append('course', form.course);
+      formData.append('doc_type', form.doc_type);
+      formData.append('title', form.title);
+      formData.append('is_public', form.is_public ? 'true' : 'false');
+      
+      if (selectedFile) {
+        formData.append('file', selectedFile);
+      } else if (!editingDoc) {
+        throw new Error('Please select a file');
+      }
+
       if (editingDoc) {
-        await aggregator.updateProspectus(editingDoc.id, payload);
+        await aggregator.updateProspectus(editingDoc.id, formData);
         toast.success('Document updated successfully');
       } else {
-        await aggregator.createProspectus(payload);
+        await aggregator.createProspectus(formData);
         toast.success('Document uploaded successfully');
       }
       setShowForm(false);
       setEditingDoc(null);
+      setSelectedFile(null);
       setForm({
         university: '',
         course: '',

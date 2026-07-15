@@ -23,7 +23,7 @@ class StudentDocSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentDoc
         fields = '__all__'
-        read_only_fields = ('id', 'created_at', 'updated_at', 'verified_by', 'verified_at')
+        read_only_fields = ('id', 'created_at', 'updated_at', 'verified_by', 'verified_at', 's3_object_uri', 'file_size_bytes', 'mime_type')
 
 
 class StudentSerializer(serializers.ModelSerializer):

@@ -14,6 +14,8 @@ services:
       - '8000:8000'
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.dev
+      USE_LOCAL_STORAGE: 'true'
+      LOCAL_STORAGE_PATH: /app/media
 
   frontend:
     build:
