@@ -11,21 +11,19 @@ const nextConfig: NextConfig = {
     buildActivity: true,
   },
   images: {
-    domains: ['0fc6-111-92-121-234.ngrok-free.app'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+      {
+        protocol: 'http',
+        hostname: '**',
+      }
+    ],
   },
-  turbopack: {},
-  allowedDevOrigins: ['0fc6-111-92-121-234.ngrok-free.app'],
-  webpack: (config: any, { dev, isServer, webpack }: any) => {
+  webpack: (config: any, { dev, isServer }: any) => {
     if (dev && !isServer) {
-      // Force HMR to use the ngrok wss endpoint
-      config.plugins.push(new webpack.DefinePlugin({
-        'process.env.__NEXT_HMR_URL': JSON.stringify('wss://0fc6-111-92-121-234.ngrok-free.app/_next/webpack-hmr'),
-      }));
-
-      config.devServer = {
-        ...config.devServer,
-        allowedHosts: 'all', // Allows the ngrok tunnel host (webpack 5 uses a string or array)
-      };
       config.watchOptions = {
         poll: 1000,
         aggregateTimeout: 300,
