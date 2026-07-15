@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -13,11 +13,24 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#4F46E5",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export const metadata: Metadata = {
   title: "RIMIT Education — B2B Aggregator Portal",
   description: "Unified B2B University Aggregator & Centralized Admission Management System for RIMIT Education & SPES Education.",
   keywords: ["RIMIT", "SPES", "B2B", "University Aggregator", "Admission Management", "Education"],
   authors: [{ name: "RIMIT Educational Charitable Trust" }],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "RIMIT B2B",
+  },
 };
 
 export default function RootLayout({
