@@ -79,16 +79,19 @@ def get_presigned_url(url, expires_in=3600):
         return url
 
     endpoint = settings.AWS_S3_ENDPOINT_URL.strip(' "\'')
+    region = settings.AWS_S3_REGION_NAME.strip(' "\'')
     if not endpoint:
-        endpoint = None
+        endpoint = f"https://s3.{region}.amazonaws.com"
 
     try:
+        from botocore.config import Config
         s3 = boto3.client(
             's3',
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID.strip(' "\''),
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY.strip(' "\''),
             endpoint_url=endpoint,
-            region_name=settings.AWS_S3_REGION_NAME.strip(' "\'')
+            region_name=region,
+            config=Config(signature_version='s3v4', s3={'addressing_style': 'virtual'})
         )
         return s3.generate_presigned_url(
             'get_object',
