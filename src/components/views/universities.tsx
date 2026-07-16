@@ -254,33 +254,37 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
             {universities.map(u => (
               <div
                 key={u.id}
-                className="bg-card rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md hover:border-primary/50 relative border-border"
+                className="bg-card rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md hover:border-primary/50 border-border flex flex-col justify-between"
               >
-                <div onClick={() => setSelected(u)}>
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="font-semibold text-lg text-foreground pr-8 leading-tight">{u.name}</h3>
-                    <span className="text-xs bg-muted px-2 py-1 rounded text-muted-foreground whitespace-nowrap">
-                      {u.state}
-                    </span>
-                  </div>
-                  {u.accreditation && (
-                    <div className="text-xs text-muted-foreground mb-3 font-medium bg-muted/50 inline-block px-2 py-0.5 rounded">
-                      {u.accreditation}
+                <div onClick={() => setSelected(u)} className="flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start mb-2 gap-4">
+                      <h3 className="font-semibold text-lg text-foreground leading-tight flex-1 min-w-0 break-words">{u.name}</h3>
+                      {canUpdate ? (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(u); }}
+                          className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors flex-shrink-0"
+                          title="Edit University"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                        </button>
+                      ) : null}
                     </div>
-                  )}
+                    <div className="flex flex-wrap gap-2 items-center mb-3">
+                      <span className="text-xs bg-muted px-2 py-0.5 rounded text-muted-foreground font-medium break-all">
+                        {u.state}
+                      </span>
+                      {u.accreditation && (
+                        <span className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-0.5 rounded border border-border/30 break-all">
+                          {u.accreditation}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   {u.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">{u.description}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mt-auto">{u.description}</p>
                   )}
                 </div>
-                {canUpdate ? (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleEditClick(u); }}
-                    className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
-                    title="Edit University"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                  </button>
-                ) : null}
               </div>
             ))}
           </div>
