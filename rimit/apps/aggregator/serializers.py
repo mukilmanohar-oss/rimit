@@ -71,7 +71,7 @@ class UniversitySerializer(serializers.ModelSerializer):
     class Meta:
         model = University
         fields = ['id', 'name', 'state', 'accreditation', 'description', 'website',
-                  'logo_uri', 'is_active', 'course_count', 'created_at', 'updated_at']
+                  'logo_uri', 'is_active', 'course_count', 'default_university_share_percent', 'created_at', 'updated_at']
         read_only_fields = ('id', 'created_at', 'updated_at')
 
     def get_course_count(self, obj):
