@@ -76,8 +76,30 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
       setUniForm({ name: '', state: '', accreditation: '', description: '', default_university_share_percent: '' });
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to ${editingUni ? 'update' : 'create'} university`);
-      toast.error(`Failed to ${editingUni ? 'update' : 'create'} university`);
+      let errorMsg = `Failed to ${editingUni ? 'update' : 'create'} university`;
+      if (err instanceof Error) {
+        try {
+          const parsed = JSON.parse(err.message);
+          if (parsed && typeof parsed === 'object') {
+            const firstKey = Object.keys(parsed)[0];
+            const errorList = parsed[firstKey];
+            if (Array.isArray(errorList) && errorList.length > 0) {
+              const rawMsg = errorList[0];
+              errorMsg = rawMsg.charAt(0).toUpperCase() + rawMsg.slice(1);
+            } else if (typeof errorList === 'string') {
+              errorMsg = errorList.charAt(0).toUpperCase() + errorList.slice(1);
+            } else if (parsed.detail) {
+              errorMsg = parsed.detail;
+            }
+          }
+        } catch (e) {
+          if (err.message && !err.message.includes('HTTP')) {
+            errorMsg = err.message;
+          }
+        }
+      }
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setSubmittingUni(false);
     }
