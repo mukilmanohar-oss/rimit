@@ -115,6 +115,64 @@ class CourseViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
             ).filter(total_fee__lte=budget_max)
         return qs
 
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def commission(self, request, pk=None):
+        """Get commission breakdown for this course."""
+        from decimal import Decimal
+        from apps.common.middleware import _current_tenant_id
+        from apps.finance.models import SubCenterCommission
+        from apps.partners.models import SubCenter
+        from apps.finance.net_remittance import calculate_net_remittance
+        from apps.aggregator.serializers import CourseCommissionBreakdownSerializer
+
+        course = self.get_object()
+        total_fee = sum(f.amount for f in course.fees.filter(is_active=True))
+        total_fee_d = Decimal(str(total_fee))
+
+        uni_pct = course.university_share_percent
+        if uni_pct is None:
+            uni_pct = course.university.default_university_share_percent
+
+        tenant_id = _current_tenant_id()
+        sc_comm_pct = Decimal('0.00')
+
+        if tenant_id:
+            sc_comm = SubCenterCommission.objects.filter(sub_center_id=tenant_id, course=course).first()
+            if sc_comm:
+                sc_comm_pct = sc_comm.commission_percent
+            else:
+                # Fallback to subcenter default
+                sc = SubCenter.objects.filter(id=tenant_id).first()
+                if sc:
+                    sc_comm_pct = sc.commission_percent
+
+        breakdown = calculate_net_remittance(
+            total_fee=total_fee_d,
+            university_share_percent=uni_pct,
+            sub_center_commission_percent=sc_comm_pct,
+        )
+
+        data = {
+            'course_id': course.id,
+            'course_name': course.name,
+            'university_name': course.university.name,
+            'total_course_fee': breakdown.total_fee,
+            'university_share': breakdown.university_share,
+            'university_share_percent': breakdown.university_share_percent,
+            'default_university_share_percent': course.university.default_university_share_percent,
+            'course_specific_university_share_percent': course.university_share_percent,
+            'gross_commission_pool': breakdown.gross_pool,
+            'sub_center_commission': breakdown.sub_center_commission,
+            'sub_center_commission_percent': breakdown.sub_center_commission_percent,
+            'rimit_commission': breakdown.rimit_commission,
+            'amount_payable_to_university': breakdown.university_share,
+            'net_payable': breakdown.net_payable,
+        }
+
+        serializer = CourseCommissionBreakdownSerializer(data)
+        return Response(serializer.data)
+
+
 
 class FeeStructureViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
     queryset = FeeStructure.objects.select_related('course')

@@ -33,6 +33,22 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
   const [validating, setValidating] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
 
+  // Commission breakdown state
+  const [commissionBreakdown, setCommissionBreakdown] = useState<any | null>(null);
+  const [fetchingCommission, setFetchingCommission] = useState(false);
+
+  const handleShowCommissionBreakdown = async (courseId: string) => {
+    setFetchingCommission(true);
+    try {
+      const data = await aggregator.getCourseCommission(courseId);
+      setCommissionBreakdown(data);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to fetch commission breakdown');
+    } finally {
+      setFetchingCommission(false);
+    }
+  };
+
   const preflightResult = (enrollCourse && enrollForm.student && enrollForm.session)
     ? { valid: true, reason: '' }
     : null;
@@ -132,7 +148,6 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
       toast.success('Enrollment created successfully!');
       setEnrollCourse(null);
       setEnrollForm({ student: '', session: '' });
-      setPreflightResult(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Enrollment failed');
     } finally {
@@ -349,18 +364,26 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                       <div className="bg-muted/30 border-t border-border px-5 py-4 space-y-3">
                         <div className="flex justify-between items-center">
                           <h5 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Fee Breakdown</h5>
-                          {course.eligibility_text && (
-                            <p className="text-xs text-muted-foreground italic max-w-md truncate">
-                              Eligibility: <span className="font-medium text-foreground">{course.eligibility_text}</span>
-                            </p>
-                          )}
+                          <div className="flex items-center gap-4">
+                            <button
+                              onClick={() => handleShowCommissionBreakdown(course.id)}
+                              disabled={fetchingCommission}
+                              className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                            >
+                              {fetchingCommission ? 'Loading...' : 'Commission Breakdown'}
+                            </button>
+                            {course.eligibility_text && (
+                              <p className="text-xs text-muted-foreground italic max-w-md truncate">
+                                Eligibility: <span className="font-medium text-foreground">{course.eligibility_text}</span>
+                              </p>
+                            )}
+                          </div>
                         </div>
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs">
                             <thead>
                               <tr className="border-b border-border text-left">
                                 <th className="py-2 text-muted-foreground font-medium">Fee Type</th>
-                                <th className="py-2 text-muted-foreground font-medium">Description/Notes</th>
                                 <th className="py-2 text-muted-foreground font-medium text-right">Amount</th>
                               </tr>
                             </thead>
@@ -369,13 +392,12 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                                 course.fees.map((fee: FeeStructure) => (
                                   <tr key={fee.id}>
                                     <td className="py-2.5 font-semibold capitalize text-foreground">{fee.fee_type.replace('_', ' ')}</td>
-                                    <td className="py-2.5 text-muted-foreground">{fee.notes || '—'}</td>
                                     <td className="py-2.5 font-bold text-foreground text-right">₹{parseFloat(fee.amount).toLocaleString('en-IN')}</td>
                                   </tr>
                                 ))
                               ) : (
                                 <tr>
-                                  <td colSpan={3} className="py-4 text-center text-muted-foreground">No active fee structure defined.</td>
+                                  <td colSpan={2} className="py-4 text-center text-muted-foreground">No active fee structure defined.</td>
                                 </tr>
                               )}
                             </tbody>
@@ -485,7 +507,6 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                   onClick={() => {
                     setEnrollCourse(null);
                     setEnrollForm({ student: '', session: '' });
-                    setPreflightResult(null);
                   }}
                   className="px-4 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground"
                 >
@@ -500,6 +521,86 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Commission Breakdown Modal */}
+      {commissionBreakdown && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-border overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex justify-between items-center">
+              <div>
+                <h3 className="font-semibold text-lg text-foreground">Commission Breakdown</h3>
+                <p className="text-xs text-muted-foreground truncate max-w-[320px]">{commissionBreakdown.course_name}</p>
+              </div>
+              <button
+                onClick={() => setCommissionBreakdown(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">University</span>
+                  <span className="font-medium text-foreground">{commissionBreakdown.university_name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total Course Fee</span>
+                  <span className="font-semibold text-foreground">₹{parseFloat(commissionBreakdown.total_course_fee).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">University Share %</span>
+                  <span className="font-medium text-foreground">{parseFloat(commissionBreakdown.university_share_percent).toFixed(2)}%</span>
+                </div>
+                <div className="flex justify-between text-sm pl-4 border-l-2 border-muted">
+                  <span className="text-xs text-muted-foreground">Default Share %</span>
+                  <span className="text-xs font-medium text-foreground">{parseFloat(commissionBreakdown.default_university_share_percent).toFixed(2)}%</span>
+                </div>
+                {commissionBreakdown.course_specific_university_share_percent !== null && (
+                  <div className="flex justify-between text-sm pl-4 border-l-2 border-muted">
+                    <span className="text-xs text-muted-foreground">Course Override %</span>
+                    <span className="text-xs font-medium text-foreground">{parseFloat(commissionBreakdown.course_specific_university_share_percent).toFixed(2)}%</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">University Share (Amt)</span>
+                  <span className="font-medium text-foreground">₹{parseFloat(commissionBreakdown.university_share).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-sm border-t border-border pt-2">
+                  <span className="text-muted-foreground font-semibold">Gross Commission Pool</span>
+                  <span className="font-semibold text-foreground">₹{parseFloat(commissionBreakdown.gross_commission_pool).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Sub-center Share %</span>
+                  <span className="font-medium text-foreground">{parseFloat(commissionBreakdown.sub_center_commission_percent).toFixed(2)}%</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Sub-center Commission</span>
+                  <span className="font-medium text-emerald-600 font-bold">₹{parseFloat(commissionBreakdown.sub_center_commission).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">RIMIT Commission</span>
+                  <span className="font-medium text-primary">₹{parseFloat(commissionBreakdown.rimit_commission).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-sm border-t-2 border-double border-border pt-3 mt-3">
+                  <span className="font-bold text-foreground">Net Payable to Gateway</span>
+                  <span className="text-lg font-bold text-primary">₹{parseFloat(commissionBreakdown.net_payable).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setCommissionBreakdown(null)}
+                  className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
