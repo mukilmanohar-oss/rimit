@@ -20,6 +20,7 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
   const [selected, setSelected] = useState<Student | null>(null);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [activeFilter, setActiveFilter] = useState<'active' | 'inactive' | 'all'>('active');
 
   // Batch checkout states
   const [selectedForCheckout, setSelectedForCheckout] = useState<Set<string>>(new Set());
@@ -34,6 +35,8 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
       const params: Record<string, string> = { page: String(page) };
       if (search) params.search = search;
       if (statusFilter) params.lead_status = statusFilter;
+      if (activeFilter === 'active') params.is_active = 'true';
+      else if (activeFilter === 'inactive') params.is_active = 'false';
       const data = await admissions.listStudents(params);
       setStudents(data.results);
       setTotalCount(data.count);
@@ -44,7 +47,7 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
     }
   };
 
-  useEffect(() => { load(); }, [page, statusFilter]); // eslint-disable-line
+  useEffect(() => { load(); }, [page, statusFilter, activeFilter]); // eslint-disable-line
 
   const handleExportCSV = () => {
     const headers = ['Name', 'Phone', 'Email', 'DOB', 'Sub-center Code', 'Course', 'Status'];
@@ -144,6 +147,15 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
           onKeyDown={(e) => e.key === 'Enter' && (setPage(1), load())}
           className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
+        <select
+          value={activeFilter}
+          onChange={(e) => { setActiveFilter(e.target.value as any); setPage(1); }}
+          className="px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="all">All</option>
+        </select>
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
