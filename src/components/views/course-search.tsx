@@ -157,18 +157,11 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
 
   const handleDownloadProspectus = async (course: Course) => {
     try {
-      // 1) Try course-mapped prospectus
-      let docs = await aggregator.listProspectus({ course: course.id, doc_type: 'prospectus', is_public: 'true', page_size: '1' });
-      let doc = docs.results?.[0];
-
-      // 2) Fallback: university-level prospectus
-      if (!doc) {
-        docs = await aggregator.listProspectus({ university: course.university, doc_type: 'prospectus', is_public: 'true', page_size: '1' });
-        doc = docs.results?.[0];
-      }
+      const docs = await aggregator.listProspectus({ course: course.id, doc_type: 'prospectus', is_public: 'true', page_size: '1' });
+      const doc = docs.results?.[0];
 
       if (!doc) {
-        toast.error('No prospectus found for this course/university.');
+        toast.error('No prospectus available for this course.');
         return;
       }
 
