@@ -15,6 +15,9 @@ const config: Config = {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+        fontFamily: {
+          sans: ['Inter', 'sans-serif'],
+        },
         colors: {
           background: 'hsl(var(--background))',
           foreground: 'hsl(var(--foreground))',
@@ -64,9 +67,10 @@ const config: Config = {
           }
         },
         animation: {
-          'fade-in': 'fadeIn 0.5s ease-out',
-          'slide-up': 'slideUp 0.6s ease-out',
-          'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          'fade-in': 'fadeIn 0.4s ease-out forwards',
+          'slide-up': 'slideUp 0.6s ease-out forwards',
+          'bounce-slow': 'bounce 3s infinite',
+          'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         },
         keyframes: {
           fadeIn: {

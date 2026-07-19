@@ -5,7 +5,7 @@ import { auth, type UserProfile } from '@/lib/api';
 import {
   Sidebar, type View,
 } from '@/components/rimit-shell';
-import { LandingPage } from '@/components/views/landing-page';
+import { LandingPageV2 as LandingPage } from '@/components/views/landing-page-v2';
 import { DashboardView } from '@/components/views/dashboard';
 import { UniversitiesView } from '@/components/views/universities';
 import { StudentsView } from '@/components/views/students';
