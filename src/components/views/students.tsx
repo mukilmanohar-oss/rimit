@@ -20,6 +20,7 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
   const [selected, setSelected] = useState<Student | null>(null);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [activeFilter, setActiveFilter] = useState<'active' | 'inactive' | 'all'>('active');
 
   // Batch checkout states
   const [selectedForCheckout, setSelectedForCheckout] = useState<Set<string>>(new Set());
@@ -34,6 +35,8 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
       const params: Record<string, string> = { page: String(page) };
       if (search) params.search = search;
       if (statusFilter) params.lead_status = statusFilter;
+      if (activeFilter === 'active') params.is_active = 'true';
+      else if (activeFilter === 'inactive') params.is_active = 'false';
       const data = await admissions.listStudents(params);
       setStudents(data.results);
       setTotalCount(data.count);
@@ -44,7 +47,7 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
     }
   };
 
-  useEffect(() => { load(); }, [page, statusFilter]); // eslint-disable-line
+  useEffect(() => { load(); }, [page, statusFilter, activeFilter]); // eslint-disable-line
 
   const handleExportCSV = () => {
     const headers = ['Name', 'Phone', 'Email', 'DOB', 'Sub-center Code', 'Course', 'Status'];
@@ -88,7 +91,7 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
       student={selected}
       profile={profile}
       onBack={() => { setSelected(null); load(); }}
-      onEdit={() => { setEditingStudent(selected); setSelected(null); }}
+      onEdit={(fullStudent) => { setEditingStudent(fullStudent); setSelected(null); }}
     />;
   }
 
@@ -144,6 +147,15 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
           onKeyDown={(e) => e.key === 'Enter' && (setPage(1), load())}
           className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
+        <select
+          value={activeFilter}
+          onChange={(e) => { setActiveFilter(e.target.value as any); setPage(1); }}
+          className="px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="all">All</option>
+        </select>
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
@@ -310,9 +322,15 @@ function StudentRegistrationForm({ onBack, onCancel }: { onBack: () => void; onC
         primary_phone: form.primary_phone,
         email: form.email,
         aadhar_number: form.aadhar_number,
-        parent_name: form.parent_name,
+        parent_name: form.father_name || form.mother_name || "",
+        father_name: form.father_name,
+        mother_name: form.mother_name,
         parent_phone: form.parent_phone,
-                course: form.course_id,
+        alternate_phone: form.alternate_phone,
+        alternate_email: form.alternate_email,
+        admission_type: form.admission_type,
+        admission_semester: form.admission_semester,
+        course: form.course_id,
         sub_course: form.sub_course,
         address_block: {
           perm_domicile_type: 'Other',
@@ -504,9 +522,11 @@ function StudentEditForm({ student, onBack, onCancel }: { student: Student; onBa
   const [form, setForm] = useState({
     full_name: student.full_name || "", dob: student.dob || "", gender: student.gender || "M",
     primary_phone: student.primary_phone || "", email: student.email || "", 
-    parent_name: student.parent_name || "", parent_phone: student.parent_phone || "",
-    address_line1: student.address_data?.line1 || "", address_city: student.address_data?.city || "", 
-    address_state: student.address_data?.state || "", address_pincode: student.address_data?.pincode || "",
+    parent_name: student.parent_name || student.father_name || student.mother_name || "", parent_phone: student.parent_phone || "",
+    address_line1: student.address_block?.perm_address || student.address_data?.line1 || "", 
+    address_city: student.address_block?.perm_city || student.address_data?.city || "", 
+    address_state: student.address_block?.perm_state || student.address_data?.state || "", 
+    address_pincode: student.address_block?.perm_pincode || student.address_data?.pincode || "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -525,7 +545,7 @@ function StudentEditForm({ student, onBack, onCancel }: { student: Student; onBa
     setSubmitting(true);
     setError(null);
     try {
-      let address_block = undefined;
+      let address_block: any = undefined;
       if (form.address_line1 && form.address_city && form.address_state && form.address_pincode) {
         address_block = {
           perm_domicile_type: 'Other',
@@ -549,10 +569,10 @@ function StudentEditForm({ student, onBack, onCancel }: { student: Student; onBa
         full_name: form.full_name, dob: form.dob, gender: form.gender,
         primary_phone: form.primary_phone, email: form.email,
         parent_name: form.parent_name, parent_phone: form.parent_phone,
-        alternate_email: form.alternate_email,
-        alternate_phone: form.alternate_phone,
-        admission_type: form.admission_type,
-        admission_semester: form.admission_semester,
+        alternate_email: student.alternate_email,
+        alternate_phone: student.alternate_phone,
+        admission_type: student.admission_type,
+        admission_semester: student.admission_semester,
         address_block: address_block,
       };
       await admissions.updateStudent(student.id, payload);

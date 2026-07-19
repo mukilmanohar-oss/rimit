@@ -51,7 +51,7 @@ class TestNetRemittanceBatchCheckout(BaseAPITestCase):
 
         client = self.counselor_client(sub_center=self.center_a)
         resp = client.post('/api/v1/checkout/batch/', {'student_ids': [str(s1.id), str(s2.id)]}, format='json')
-        assert resp.status_code == status.HTTP_200_OK
+        assert resp.status_code == status.HTTP_200_OK, resp.data
 
         # Per student: net_payable = 85,000
         assert Decimal(resp.data['total_amount']) == Decimal('170000.00')
@@ -112,3 +112,34 @@ class TestNetRemittanceBatchCheckout(BaseAPITestCase):
         resp = client.post('/api/v1/checkout/batch/', {'student_ids': [str(s1.id), str(s2.id)]}, format='json')
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert 'same sub-center' in resp.data['error']
+
+    def test_course_commission_breakdown_api(self):
+        uni, course = self._setup_course_with_fee(
+            total_fee=100000,
+            uni_default_pct=Decimal('40.00'),
+        )
+        SubCenterUniversityMapping.objects.create(sub_center=self.center_a, university=uni)
+        # Setup subcenter commission percent
+        self.center_a.commission_percent = Decimal('60.00')
+        self.center_a.save(update_fields=['commission_percent'])
+
+
+        client = self.counselor_client(sub_center=self.center_a)
+        # GET /api/v1/courses/{id}/commission
+        resp = client.get(f'/api/v1/courses/{course.id}/commission')
+        assert resp.status_code == status.HTTP_200_OK
+        
+        # Verify breakdown:
+        # Total fee = 100,000
+        # Uni share = 40,000 (40% of 100,000)
+        # Gross Pool = 60,000
+        # Sub-center commission = 36,000 (60% of 60,000)
+        # RIMIT commission = 24,000 (60,000 - 36,000)
+        # Net payable = 64,000 (100,000 - 36,000)
+        assert Decimal(resp.data['total_course_fee']) == Decimal('100000.00')
+        assert Decimal(resp.data['university_share']) == Decimal('40000.00')
+        assert Decimal(resp.data['gross_commission_pool']) == Decimal('60000.00')
+        assert Decimal(resp.data['sub_center_commission']) == Decimal('36000.00')
+        assert Decimal(resp.data['rimit_commission']) == Decimal('24000.00')
+        assert Decimal(resp.data['net_payable']) == Decimal('64000.00')
+

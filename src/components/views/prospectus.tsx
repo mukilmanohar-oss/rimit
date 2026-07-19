@@ -375,7 +375,7 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-border overflow-hidden">
             <div className="px-6 py-4 border-b border-border flex justify-between items-center">
-              <h3 className="font-semibold text-lg">{editingDoc ? 'Edit Document Details' : 'Upload Document to Vault'}</h3>
+              <h3 className="font-semibold text-lg">{editingDoc ? 'Edit / Replace Document' : 'Upload Document to Vault'}</h3>
               <button
                 onClick={() => {
                   setShowForm(false);
@@ -451,18 +451,34 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
                 </div>
               </div>
 
-              {!editingDoc && (
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">File Upload *</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={handleFileChange}
-                    required={!editingDoc}
-                    className="w-full text-xs text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  {editingDoc ? 'Replace Document (Optional)' : 'File Upload *'}
+                </label>
+                {editingDoc && !selectedFile && (
+                  <div className="flex items-center gap-2 p-2.5 mb-2 rounded-md bg-muted/40 border border-border">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{editingDoc.title}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {formatBytes(editingDoc.file_size_bytes || 0)} &bull; {editingDoc.mime_type}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleFileChange}
+                  required={!editingDoc}
+                  className="w-full text-xs text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                />
+                {editingDoc && (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Leave empty to keep the current document.
+                  </p>
+                )}
+              </div>
 
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1">Title *</label>
@@ -505,7 +521,7 @@ export function ProspectusView({ profile }: { profile: UserProfile }) {
                   disabled={submitting || !form.university || !form.title || !form.s3_object_uri}
                   className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {submitting ? 'Saving...' : editingDoc ? 'Update Details' : 'Upload Document'}
+                  {submitting ? 'Saving...' : editingDoc ? (selectedFile ? 'Replace & Update' : 'Update Details') : 'Upload Document'}
                 </button>
               </div>
             </form>

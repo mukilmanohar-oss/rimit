@@ -10,7 +10,7 @@ interface StudentDetailProps {
   student: Student;
   profile: UserProfile;
   onBack: () => void;
-  onEdit?: () => void;
+  onEdit?: (student: Student) => void;
 }
 
 export function StudentDetail({ student: initialStudent, profile, onBack, onEdit }: StudentDetailProps) {
@@ -190,7 +190,7 @@ export function StudentDetail({ student: initialStudent, profile, onBack, onEdit
           <div className="flex gap-2">
             {onEdit && canEditStudent && (
               <button
-                onClick={onEdit}
+                onClick={() => student && onEdit?.(student)}
                 className="border border-border text-foreground hover:bg-muted rounded-md px-3 py-1.5 text-sm font-medium"
               >
                 Edit Student

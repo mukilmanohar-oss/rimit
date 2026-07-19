@@ -136,6 +136,24 @@ export interface Course {
   created_at: string;
 }
 
+export interface CourseCommissionBreakdown {
+  course_id: string;
+  course_name: string;
+  university_name: string;
+  total_course_fee: string;
+  university_share: string;
+  university_share_percent: string;
+  default_university_share_percent: string;
+  course_specific_university_share_percent: string | null;
+  gross_commission_pool: string;
+  sub_center_commission: string;
+  sub_center_commission_percent: string;
+  rimit_commission: string;
+  amount_payable_to_university: string;
+  net_payable: string;
+}
+
+
 export interface FeeStructure {
   id: string;
   course: string;
@@ -431,7 +449,10 @@ export const aggregator = {
   listCourses: (params?: Record<string, string>) =>
     apiFetch<Paginated<Course>>(`/courses${qs(params)}`),
   getCourse: (id: string) => apiFetch<Course>(`/courses/${id}`),
+  getCourseCommission: (id: string) =>
+    apiFetch<CourseCommissionBreakdown>(`/courses/${id}/commission`),
   createCourse: (data: Partial<Course>) =>
+
     apiFetch<Course>('/courses', { method: 'POST', body: JSON.stringify(data) }),
   listFees: (courseId?: string) =>
     apiFetch<Paginated<FeeStructure>>(courseId ? `/fees?course=${courseId}` : '/fees'),

@@ -71,7 +71,7 @@ class UniversitySerializer(serializers.ModelSerializer):
     class Meta:
         model = University
         fields = ['id', 'name', 'state', 'accreditation', 'description', 'website',
-                  'logo_uri', 'is_active', 'course_count', 'created_at', 'updated_at']
+                  'logo_uri', 'is_active', 'course_count', 'default_university_share_percent', 'created_at', 'updated_at']
         read_only_fields = ('id', 'created_at', 'updated_at')
 
     def get_course_count(self, obj):
@@ -84,3 +84,21 @@ class UniversityDetailSerializer(UniversitySerializer):
 
     class Meta(UniversitySerializer.Meta):
         fields = UniversitySerializer.Meta.fields + ['courses', 'documents']
+
+
+class CourseCommissionBreakdownSerializer(serializers.Serializer):
+    course_id = serializers.UUIDField()
+    course_name = serializers.CharField()
+    university_name = serializers.CharField()
+    total_course_fee = serializers.DecimalField(max_digits=12, decimal_places=2)
+    university_share = serializers.DecimalField(max_digits=12, decimal_places=2)
+    university_share_percent = serializers.DecimalField(max_digits=5, decimal_places=2)
+    default_university_share_percent = serializers.DecimalField(max_digits=5, decimal_places=2)
+    course_specific_university_share_percent = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True)
+    gross_commission_pool = serializers.DecimalField(max_digits=12, decimal_places=2)
+    sub_center_commission = serializers.DecimalField(max_digits=12, decimal_places=2)
+    sub_center_commission_percent = serializers.DecimalField(max_digits=5, decimal_places=2)
+    rimit_commission = serializers.DecimalField(max_digits=12, decimal_places=2)
+    amount_payable_to_university = serializers.DecimalField(max_digits=12, decimal_places=2)
+    net_payable = serializers.DecimalField(max_digits=12, decimal_places=2)
+

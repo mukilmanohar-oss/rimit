@@ -450,6 +450,12 @@ const [showRuleForm, setShowRuleForm] = useState(false);
               {canUpdate && (
                 <div className="mt-4 pt-3 border-t border-border flex gap-3">
                   <button
+                    onClick={() => handleEditSession(s)}
+                    className="text-xs text-primary hover:underline font-semibold"
+                  >
+                    Edit
+                  </button>
+                  <button
                     onClick={() => handleToggleActive(s)}
                     className="text-xs text-primary hover:underline font-semibold"
                   >
