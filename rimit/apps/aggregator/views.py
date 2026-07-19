@@ -211,7 +211,7 @@ class UniversityDocVaultViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
     serializer_class = UniversityDocVaultSerializer
     permission_classes = [ResourcePermission]
     resource_name = 'university_doc'
-    filterset_fields = ['university', 'doc_type', 'is_public']
+    filterset_fields = ['university', 'doc_type', 'is_public', 'course']
     search_fields = ['title', 'university__name']
     ordering_fields = ['title', 'created_at']
 
