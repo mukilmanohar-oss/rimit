@@ -33,6 +33,13 @@ class CourseSerializer(serializers.ModelSerializer):
                         "name": "A course with this name already exists under this university."
                     })
                 attrs['name'] = cleaned_name
+
+            # Part B: Enforce university_share_percent is required on creation
+            share_pct = attrs.get('university_share_percent')
+            if share_pct is None:
+                raise serializers.ValidationError({
+                    "university_share_percent": "University share percentage override is required."
+                })
         return attrs
 
 
