@@ -19,6 +19,22 @@ class CourseSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('id', 'created_at', 'updated_at')
 
+    def validate(self, attrs):
+        # We only enforce uniqueness on course creation (Part A)
+        if not self.instance:
+            name = attrs.get('name')
+            university = attrs.get('university')
+            if name and university:
+                cleaned_name = name.strip()
+                if not cleaned_name:
+                    raise serializers.ValidationError({"name": "Course name cannot be blank."})
+                if Course.objects.filter(university=university, name__iexact=cleaned_name).exists():
+                    raise serializers.ValidationError({
+                        "name": "A course with this name already exists under this university."
+                    })
+                attrs['name'] = cleaned_name
+        return attrs
+
 
 class CourseListSerializer(serializers.ModelSerializer):
     """Serializer for list view."""

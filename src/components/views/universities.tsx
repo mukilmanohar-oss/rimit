@@ -395,6 +395,17 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
     e.preventDefault();
     setSubmittingCourse(true);
     setError(null);
+
+    const cleanedName = courseForm.name.trim().toLowerCase();
+    const isDuplicate = detail?.courses?.some(
+      (c: any) => c.name.trim().toLowerCase() === cleanedName
+    );
+    if (isDuplicate) {
+      setError("A course with this name already exists under this university.");
+      setSubmittingCourse(false);
+      return;
+    }
+
     try {
       await aggregator.createCourse({
         university: university.id,
