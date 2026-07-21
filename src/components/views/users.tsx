@@ -17,6 +17,9 @@ export function UsersView({ profile }: { profile: UserProfile }) {
   const [canNext, setCanNext] = useState(false);
   const [canPrev, setCanPrev] = useState(false);
 
+  // Filters
+  const [subCenterFilter, setSubCenterFilter] = useState('');
+
   // Form state
   const [form, setForm] = useState({
     username: '',
@@ -33,8 +36,11 @@ export function UsersView({ profile }: { profile: UserProfile }) {
     setLoading(true);
     setError(null);
     try {
+      const params: Record<string, string> = {};
+      if (subCenterFilter) params.sub_center = subCenterFilter;
+
       const [uData, scData] = await Promise.all([
-        partners.listUsers(withPaging(undefined, { page, pageSize: DEFAULT_PAGE_SIZE })),
+        partners.listUsers(withPaging(params, { page, pageSize: DEFAULT_PAGE_SIZE })),
         partners.listSubCenters({ page_size: '200' }),
       ]);
       setUsers(uData.results);
@@ -49,7 +55,7 @@ export function UsersView({ profile }: { profile: UserProfile }) {
     }
   };
 
-  useEffect(() => { load(); }, [page]); // eslint-disable-line
+  useEffect(() => { load(); }, [page, subCenterFilter]); // eslint-disable-line
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -244,7 +250,7 @@ export function UsersView({ profile }: { profile: UserProfile }) {
           <button
             onClick={() => {
               setEditingUser(null);
-              setForm({ username: '', email: '', first_name: '', last_name: '', role: 'counselor', sub_center: '', password: '', phone: '' });
+              setForm({ username: '', email: '', role: 'counselor', sub_center: '', password: '', phone: '' });
               setShowForm(true);
             }}
             className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium transition-colors"
@@ -253,6 +259,24 @@ export function UsersView({ profile }: { profile: UserProfile }) {
           </button>
         )}
       />
+
+      <div className="flex gap-3 mb-4 flex-wrap">
+        <select
+          value={subCenterFilter}
+          onChange={e => {
+            setSubCenterFilter(e.target.value);
+            setPage(1);
+          }}
+          className="px-3 py-2 rounded-md border border-input bg-background text-sm min-w-[200px]"
+        >
+          <option value="">All Sub-Centers</option>
+          {subCenters.map(sc => (
+            <option key={sc.id} value={sc.id}>
+              {sc.name} ({sc.center_code})
+            </option>
+          ))}
+        </select>
+      </div>
 
       {loading ? <LoadingState /> : error ? <ErrorState message={error} /> :
         users.length === 0 ? <EmptyState message="No users found" /> : (
