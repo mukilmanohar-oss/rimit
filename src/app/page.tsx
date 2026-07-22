@@ -22,6 +22,7 @@ import { LeadMonitorView } from '@/components/views/lead-monitor';
 import { CheckoutView } from '@/components/views/checkout';
 import { LeadsCreateView } from '@/components/views/leads-create';
 import { LeadsView } from '@/components/views/leads';
+import { ChangePasswordView } from '@/components/views/change-password';
 
 export default function Home() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -107,6 +108,7 @@ export default function Home() {
         {view === 'checkout' && <CheckoutView profile={profile} />}
         {view === 'leads-create' && <LeadsCreateView profile={profile} />}
         {view === 'leads' && <LeadsView profile={profile} />}
+        {view === 'change-password' && <ChangePasswordView profile={profile} />}
       </main>
     </div>
   );
