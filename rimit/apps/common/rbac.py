@@ -29,7 +29,7 @@ PRIVILEGED_ROLES = [SA, AH]
 PERMISSION_MATRIX = {
     'university':       {'create': [SA],         'read': ALL_ROLES,       'update': [SA],         'delete': [SA]},
     'course':           {'create': [SA],         'read': ALL_ROLES,       'update': [SA],         'delete': [SA]},
-    'fee_structure':    {'create': [SA],         'read': [SA, AH, C, F],  'update': [SA],         'delete': [SA]},
+    'fee_structure':    {'create': [SA],         'read': [SA, AH, C, F, SC],  'update': [SA],         'delete': [SA]},
     'university_doc':   {'create': [SA],         'read': ALL_ROLES,       'update': [SA],         'delete': [SA]},
     'sub_center':       {'create': [SA],         'read': [SA, AH, C, F],  'update': [SA],         'delete': [SA]},
     'system_user':      {'create': [SA],         'read': [SA],            'update': [SA],         'delete': [SA]},

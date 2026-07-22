@@ -35,7 +35,7 @@ type Action = CrudAction | SpecialAction;
 const PERMISSION_MATRIX: Record<string, Partial<Record<Action, readonly Role[]>>> = {
   university:       { create: [SA],        read: ALL,        update: [SA],        delete: [SA] },
   course:           { create: [SA],        read: ALL,        update: [SA],        delete: [SA] },
-  fee_structure:    { create: [SA],        read: [SA, AH, C, F], update: [SA],        delete: [SA] },
+  fee_structure:    { create: [SA],        read: [SA, AH, C, F, SC], update: [SA],        delete: [SA] },
   university_doc:   { create: [SA],        read: ALL,        update: [SA],        delete: [SA] },
   sub_center:       { create: [SA],        read: [SA, AH, C, F], update: [SA],        delete: [SA] },
   system_user:      { create: [SA],        read: [SA],        update: [SA],        delete: [SA] },
