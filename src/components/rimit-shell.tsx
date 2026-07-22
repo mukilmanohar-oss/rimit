@@ -249,7 +249,12 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
               <p className="text-[10px] text-muted-foreground truncate">B2B Aggregator</p>
             </div>
           )}
-          <button onClick={() => setCollapsed(!collapsed)} className="hidden md:block text-muted-foreground hover:text-foreground p-1 mx-auto">
+          <button 
+            onClick={() => setCollapsed(!collapsed)} 
+            className={`hidden md:block text-muted-foreground hover:text-foreground p-1 ${
+              collapsed ? 'mx-auto' : ''
+            }`}
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
