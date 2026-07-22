@@ -1,5 +1,6 @@
 """Serializers for admissions app."""
 import re
+from django.db import IntegrityError
 from rest_framework import serializers
 from apps.admissions.models import Student, StudentAcademicHistory, StudentDoc, Enrollment, StudentAddress
 from apps.common.models import hash_aadhar
@@ -36,7 +37,7 @@ class StudentSerializer(serializers.ModelSerializer):
     academic_histories = StudentAcademicHistorySerializer(many=True, required=False)
     documents = StudentDocSerializer(many=True, read_only=True)
     address_block = StudentAddressSerializer(required=False)
-    aadhar_number = serializers.CharField(write_only=True, required=False, allow_blank=True,
+    aadhar_number = serializers.CharField(write_only=True, required=True,
                                           help_text='Plaintext Aadhar; stored as SHA-256 hash')
     sub_center_code = serializers.CharField(source='sub_center.center_code', read_only=True)
     course_name = serializers.CharField(source='course.name', read_only=True)
@@ -86,10 +87,10 @@ class StudentSerializer(serializers.ModelSerializer):
         aadhar = validated_data.pop('aadhar_number', None)
         address_block_data = validated_data.pop('address_block', None)
         academic_histories_data = validated_data.pop('academic_histories', [])
-        
+
         request = self.context.get('request')
         if request and 'sub_center' not in validated_data:
-            from apps.partners.models import SystemUser, SubCenter
+            from apps.partners.models import SystemUser
             try:
                 su = SystemUser.objects.get(user=request.user)
                 if su.sub_center_id:
@@ -104,28 +105,38 @@ class StudentSerializer(serializers.ModelSerializer):
             if fallback:
                 validated_data['sub_center'] = fallback
             else:
-                from rest_framework import serializers as drf_serializers
-                raise drf_serializers.ValidationError({'sub_center': 'No sub-centers available. Please create one first.'})
+                raise serializers.ValidationError(
+                    {'sub_center': 'No sub-centers available. Please create one first.'}
+                )
 
         student = Student(**validated_data)
         if aadhar:
             student.set_aadhar(aadhar)
+
+        # Explicit pre-save duplicate check (fast path, returns clean 400).
+        # This is the primary guard; the IntegrityError below is a race-condition
+        # safety net in case two requests slip through simultaneously.
+        if student.aadhar_hash and Student.all_objects.filter(aadhar_hash=student.aadhar_hash).exists():
+            raise serializers.ValidationError(
+                {'aadhar_number': 'A student with this Aadhar number already exists.'}
+            )
+
         try:
             student.save()
-        except Exception as e:
-            from django.db import IntegrityError
-            if isinstance(e, IntegrityError) and 'aadhar_hash' in str(e).lower():
-                from rest_framework import serializers as drf_serializers
-                raise drf_serializers.ValidationError({'aadhar_number': 'A student with this Aadhar number already exists.'})
-            # Re-raise the actual error so it is not masked
-            raise e
-            
+        except IntegrityError as e:
+            # Race-condition safety net: DB unique constraint fires.
+            if 'aadhar_hash' in str(e).lower():
+                raise serializers.ValidationError(
+                    {'aadhar_number': 'A student with this Aadhar number already exists.'}
+                )
+            raise
+
         if address_block_data:
             StudentAddress.objects.create(student=student, **address_block_data)
-            
+
         for ah_data in academic_histories_data:
             StudentAcademicHistory.objects.create(student=student, **ah_data)
-            
+
         return student
 
     def update(self, instance, validated_data):
