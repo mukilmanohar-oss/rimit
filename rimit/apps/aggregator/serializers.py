@@ -20,26 +20,83 @@ class CourseSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'created_at', 'updated_at')
 
     def validate(self, attrs):
-        # We only enforce uniqueness on course creation (Part A)
-        if not self.instance:
-            name = attrs.get('name')
-            university = attrs.get('university')
-            if name and university:
-                cleaned_name = name.strip()
-                if not cleaned_name:
-                    raise serializers.ValidationError({"name": "Course name cannot be blank."})
-                if Course.objects.filter(university=university, name__iexact=cleaned_name).exists():
-                    raise serializers.ValidationError({
-                        "name": "A course with this name already exists under this university."
-                    })
-                attrs['name'] = cleaned_name
+        is_create = self.instance is None
 
-            # Part B: Enforce university_share_percent is required on creation
+        # ----------------------------------------------------
+        # Rule 1: Name Uniqueness (Per University, Case-Insensitive)
+        # ----------------------------------------------------
+        name = attrs.get('name')
+        university = attrs.get('university')
+
+        # Clean/strip name if provided
+        if name is not None:
+            cleaned_name = name.strip()
+            if not cleaned_name:
+                raise serializers.ValidationError({"name": "Course name cannot be blank."})
+            attrs['name'] = cleaned_name
+            name = cleaned_name
+
+        # Fallback to existing instance values if not provided in the patch payload
+        if self.instance:
+            if name is None:
+                name = self.instance.name
+            if university is None:
+                university = self.instance.university
+
+        if name and university:
+            duplicate_qs = Course.objects.filter(
+                name__iexact=name,
+                university=university
+            )
+            if self.instance:
+                duplicate_qs = duplicate_qs.exclude(id=self.instance.id)
+            
+            if duplicate_qs.exists():
+                raise serializers.ValidationError({
+                    "name": "A course with this name already exists under this university."
+                })
+
+        # ----------------------------------------------------
+        # Rule 2: University Share Percentage (using attrs)
+        # ----------------------------------------------------
+        if is_create:
+            # Required and cannot be null on creation
             share_pct = attrs.get('university_share_percent')
             if share_pct is None:
                 raise serializers.ValidationError({
                     "university_share_percent": "University share percentage override is required."
                 })
+        else:
+            # On update: reject explicitly if present and null
+            if 'university_share_percent' in attrs:
+                share_pct_val = attrs.get('university_share_percent')
+                if share_pct_val is None:
+                    raise serializers.ValidationError({
+                        'university_share_percent': 'university_share_percent cannot be null on update.'
+                    })
+
+        # ----------------------------------------------------
+        # Rule 3: Stream Reclassification (using attrs & database state)
+        # ----------------------------------------------------
+        if not is_create:
+            # Force reclassification: if the resulting stream is 'Other', reject.
+            current_stream = attrs.get('stream', self.instance.stream)
+            if current_stream == 'Other':
+                raise serializers.ValidationError({
+                    'stream': 'Courses with stream "Other" must be reclassified to a valid stream on update.'
+                })
+
+        # ----------------------------------------------------
+        # Rule 4: Duration Months (Enforce > 0 if present)
+        # ----------------------------------------------------
+        # Enforce duration_months > 0 if key is present in attrs (Option A)
+        if 'duration_months' in attrs:
+            duration = attrs.get('duration_months')
+            if duration is None or duration <= 0:
+                raise serializers.ValidationError({
+                    'duration_months': 'duration_months must be greater than 0.'
+                })
+
         return attrs
 
 

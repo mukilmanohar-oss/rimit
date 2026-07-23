@@ -14,7 +14,7 @@ import {
 
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
-type View = 'dashboard' | 'universities' | 'course-search' | 'prospectus' | 'leads' | 'leads-create' | 'students' | 'enrollments' | 'sessions' | 'payments' | 'subcenters' | 'users' | 'tickets' | 'notification-logs' | 'lead-monitor' | 'checkout';
+type View = 'dashboard' | 'universities' | 'course-search' | 'prospectus' | 'leads' | 'leads-create' | 'students' | 'enrollments' | 'sessions' | 'payments' | 'subcenters' | 'users' | 'tickets' | 'notification-logs' | 'lead-monitor' | 'checkout' | 'change-password';
 
 interface AppShellProps {
   profile: UserProfile;
@@ -184,35 +184,7 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
   mobileMenuOpen?: boolean;
   setMobileMenuOpen?: (open: boolean) => void;
 }) {
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [changing, setChanging] = useState(false);
-  const [passError, setPassError] = useState<string | null>(null);
-  const [passSuccess, setPassSuccess] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match');
-      return;
-    }
-    setChanging(true);
-    try {
-      await auth.changePassword(oldPassword, newPassword);
-      toast.success('Password changed successfully');
-      setOldPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setShowPasswordModal(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to change password');
-    } finally {
-      setChanging(false);
-    }
-  };
 
   const roleLabel: Record<string, string> = {
     super_admin: 'Super Admin',
@@ -249,7 +221,12 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
               <p className="text-[10px] text-muted-foreground truncate">B2B Aggregator</p>
             </div>
           )}
-          <button onClick={() => setCollapsed(!collapsed)} className="hidden md:block text-muted-foreground hover:text-foreground p-1 mx-auto">
+          <button 
+            onClick={() => setCollapsed(!collapsed)} 
+            className={`hidden md:block text-muted-foreground hover:text-foreground p-1 ${
+              collapsed ? 'mx-auto' : ''
+            }`}
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
@@ -301,9 +278,16 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
           </div>
         )}
         <button
-          onClick={() => setShowPasswordModal(true)}
+          onClick={() => {
+            setView('change-password');
+            setMobileMenuOpen?.(false);
+          }}
           title="Change Password"
-          className={`w-full text-left px-3 py-2 mb-1 rounded-md text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition ${collapsed ? 'justify-center text-center' : ''}`}
+          className={`w-full text-left px-3 py-2 mb-1 rounded-md text-sm ${
+            view === 'change-password'
+              ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+              : 'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground'
+          } transition ${collapsed ? 'justify-center text-center' : ''}`}
         >
           {collapsed ? '🔑' : 'Change Password'}
         </button>
@@ -316,77 +300,7 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
         </button>
       </div>
 
-      {/* Password Change Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-card border border-border w-full max-w-sm rounded-lg shadow-lg p-6 space-y-4">
-            <div>
-              <h3 className="text-lg font-bold text-foreground">Change Password</h3>
-              <p className="text-xs text-muted-foreground">Update your account credentials</p>
-            </div>
 
-            {passError && (
-              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs p-2.5 rounded">
-                {passError}
-              </div>
-            )}
-            {passSuccess && (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs p-2.5 rounded">
-                {passSuccess}
-              </div>
-            )}
-
-            <form onSubmit={handlePasswordChange} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Current Password</label>
-                <input
-                  type="password"
-                  value={oldPassword}
-                  onChange={e => setOldPassword(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none"
-                />
-              </div>
-              <div className="flex gap-2 pt-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => { setShowPasswordModal(false); setPassError(null); setPassSuccess(null); }}
-                  className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={changing}
-                  className="bg-primary text-primary-foreground rounded-md px-4 py-1.5 text-xs font-medium hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {changing ? 'Updating...' : 'Update Password'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </aside>
     </>
   );

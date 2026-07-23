@@ -354,6 +354,17 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
   });
   const [submittingCourse, setSubmittingCourse] = useState(false);
 
+  // Edit Course form state
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [editCourseForm, setEditCourseForm] = useState({
+    name: '',
+    stream: 'Undergraduate',
+    duration_months: 36,
+    eligibility_text: '',
+    university_share_percent: '',
+  });
+  const [submittingEditCourse, setSubmittingEditCourse] = useState(false);
+
   // Add Fee form state
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [feeForm, setFeeForm] = useState({
@@ -367,6 +378,7 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
   const [feeToDelete, setFeeToDelete] = useState<string | null>(null);
 
   const { canCreate, canUpdate, canDelete } = usePermissions(profile.role, 'course');
+  const { canCreate: canCreateFee, canDelete: canDeleteFee } = usePermissions(profile.role, 'fee_structure');
 
   const loadDetail = async () => {
     setLoading(true);
@@ -429,6 +441,53 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
       setError(err instanceof Error ? err.message : 'Failed to create course');
     } finally {
       setSubmittingCourse(false);
+    }
+  };
+
+  const handleUpdateCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCourse) return;
+    setSubmittingEditCourse(true);
+    setError(null);
+    try {
+      const payload: any = {};
+      
+      if (editCourseForm.name !== editingCourse.name) {
+        payload.name = editCourseForm.name;
+      }
+      if (editCourseForm.stream !== editingCourse.stream) {
+        payload.stream = editCourseForm.stream;
+      }
+      if (Number(editCourseForm.duration_months) !== editingCourse.duration_months) {
+        payload.duration_months = Number(editCourseForm.duration_months);
+      }
+      if (editCourseForm.eligibility_text !== (editingCourse.eligibility_text || '')) {
+        payload.eligibility_text = editCourseForm.eligibility_text;
+      }
+      
+      const originalShare = editingCourse.university_share_percent !== null && editingCourse.university_share_percent !== undefined
+        ? editingCourse.university_share_percent.toString()
+        : '';
+      
+      if (originalShare !== '' && editCourseForm.university_share_percent === '') {
+        setError("University share percentage cannot be cleared once set.");
+        setSubmittingEditCourse(false);
+        return;
+      }
+
+      if (editCourseForm.university_share_percent !== originalShare) {
+        if (editCourseForm.university_share_percent !== '') {
+          payload.university_share_percent = Number(editCourseForm.university_share_percent);
+        }
+      }
+
+      await aggregator.updateCourse(editingCourse.id, payload);
+      setEditingCourse(null);
+      loadDetail();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update course');
+    } finally {
+      setSubmittingEditCourse(false);
     }
   };
 
@@ -589,6 +648,101 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
         </div>
       )}
 
+      {/* Edit Course Overlay */}
+      {editingCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card border border-border w-full max-w-sm rounded-lg shadow-lg p-6 space-y-4">
+            <h3 className="text-base font-bold text-foreground">Edit Course</h3>
+            <form onSubmit={handleUpdateCourse} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Course Name *</label>
+                <input
+                  type="text"
+                  value={editCourseForm.name}
+                  onChange={e => setEditCourseForm(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                  placeholder="E.g., Bachelor of Technology"
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Stream *</label>
+                  <select
+                    value={editCourseForm.stream}
+                    onChange={e => setEditCourseForm(prev => ({ ...prev, stream: e.target.value }))}
+                    required
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none"
+                  >
+                    {editCourseForm.stream === 'Other' && (
+                      <option value="Other">Other (Must Reclassify)</option>
+                    )}
+                    <option value="Undergraduate">Undergraduate</option>
+                    <option value="Postgraduate">Postgraduate</option>
+                    <option value="Diploma">Diploma</option>
+                    <option value="Open Schooling">Open Schooling</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Duration (Months) *</label>
+                  <input
+                    type="number"
+                    value={editCourseForm.duration_months}
+                    onChange={e => setEditCourseForm(prev => ({ ...prev, duration_months: Number(e.target.value) }))}
+                    required
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Eligibility Text</label>
+                <input
+                  type="text"
+                  value={editCourseForm.eligibility_text}
+                  onChange={e => setEditCourseForm(prev => ({ ...prev, eligibility_text: e.target.value }))}
+                  placeholder="10+2 with Physics, Chem, Math"
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">University Share % Override</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={editCourseForm.university_share_percent}
+                  onChange={e => setEditCourseForm(prev => ({ ...prev, university_share_percent: e.target.value }))}
+                  placeholder="Leave blank to inherit university default"
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                />
+              </div>
+              {editCourseForm.stream === 'Other' && (
+                <p className="text-xs text-destructive font-medium mt-1">
+                  * Stream "Other" must be reclassified to enable updating.
+                </p>
+              )}
+              <div className="flex gap-2 pt-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditingCourse(null)}
+                  className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEditCourse || editCourseForm.stream === 'Other'}
+                  className="bg-primary text-primary-foreground rounded-md px-4 py-1.5 text-xs font-medium hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {submittingEditCourse ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-3">
         <h2 className="text-lg font-semibold">Courses ({detail.courses?.length ?? 0})</h2>
         {canCreate && (
@@ -623,7 +777,7 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                         <div key={f.id} className="text-xs flex items-center justify-end gap-2">
                           <span className="text-muted-foreground">{f.fee_type}:</span>{' '}
                           <span className="font-semibold text-foreground">₹{parseFloat(f.amount).toLocaleString('en-IN')}</span>
-                          {canCreate && (
+                          {canDeleteFee && (
                             <button
                               onClick={() => setFeeToDelete(f.id)}
                               className="text-destructive hover:underline font-bold"
@@ -639,66 +793,90 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                     <p className="text-xs text-muted-foreground">No fees configured</p>
                   )}
 
-                  {canDelete && (
-                    <div className="flex gap-2 justify-end">
-                      {activeCourseId === c.id ? (
-                        <form onSubmit={(e) => handleCreateFee(e, c.id)} className="bg-muted p-2 rounded-md space-y-2 text-left w-48">
-                          <select
-                            value={feeForm.fee_type}
-                            onChange={e => setFeeForm(prev => ({ ...prev, fee_type: e.target.value }))}
-                            required
-                            className="w-full px-2 py-1 text-xs border rounded bg-background focus:outline-none"
-                          >
-                            <option value="admission">Admission Fee</option>
-                            <option value="tuition">Tuition Fee</option>
-                            <option value="exam">Examination Fee</option>
-                            <option value="library">Library Fee</option>
-                            <option value="lab">Lab Fee</option>
-                            <option value="other">Other</option>
-                          </select>
-                          <input
-                            type="number"
-                            required
-                            placeholder="Amount (₹)"
-                            value={feeForm.amount}
-                            onChange={e => setFeeForm(prev => ({ ...prev, amount: e.target.value }))}
-                            className="w-full px-2 py-1 text-xs border rounded bg-background"
-                          />
-                          <div className="flex gap-1 justify-end">
+                  {(canCreateFee || canUpdate || canDelete) && (
+                    <div className="flex gap-2 justify-end items-center">
+                      {canCreateFee && (
+                        <>
+                          {activeCourseId === c.id ? (
+                            <form onSubmit={(e) => handleCreateFee(e, c.id)} className="bg-muted p-2 rounded-md space-y-2 text-left w-48">
+                              <select
+                                value={feeForm.fee_type}
+                                onChange={e => setFeeForm(prev => ({ ...prev, fee_type: e.target.value }))}
+                                required
+                                className="w-full px-2 py-1 text-xs border rounded bg-background focus:outline-none"
+                              >
+                                <option value="admission">Admission Fee</option>
+                                <option value="tuition">Tuition Fee</option>
+                                <option value="exam">Examination Fee</option>
+                                <option value="library">Library Fee</option>
+                                <option value="lab">Lab Fee</option>
+                                <option value="other">Other</option>
+                              </select>
+                              <input
+                                type="number"
+                                required
+                                placeholder="Amount (₹)"
+                                value={feeForm.amount}
+                                onChange={e => setFeeForm(prev => ({ ...prev, amount: e.target.value }))}
+                                className="w-full px-2 py-1 text-xs border rounded bg-background"
+                              />
+                              <div className="flex gap-1 justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveCourseId(null)}
+                                  className="text-[10px] border px-2 py-0.5 rounded bg-background"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="submit"
+                                  disabled={submittingFee}
+                                  className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                            </form>
+                          ) : (
                             <button
-                              type="button"
-                              onClick={() => setActiveCourseId(null)}
-                              className="text-[10px] border px-2 py-0.5 rounded bg-background"
+                              onClick={() => {
+                                setActiveCourseId(c.id);
+                                setFeeForm({ fee_type: '', amount: '' });
+                              }}
+                              className="text-[11px] text-primary hover:underline font-semibold"
                             >
-                              Cancel
+                              + Add Fee
                             </button>
-                            <button
-                              type="submit"
-                              disabled={submittingFee}
-                              className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded"
-                            >
-                              Add
-                            </button>
-                          </div>
-                        </form>
-                      ) : (
+                          )}
+                        </>
+                      )}
+
+                      {canUpdate && (
                         <button
                           onClick={() => {
-                            setActiveCourseId(c.id);
-                            setFeeForm({ fee_type: '', amount: '' });
+                            setEditingCourse(c);
+                            setEditCourseForm({
+                              name: c.name,
+                              stream: c.stream,
+                              duration_months: c.duration_months,
+                              eligibility_text: c.eligibility_text || '',
+                              university_share_percent: c.university_share_percent !== null && c.university_share_percent !== undefined ? c.university_share_percent.toString() : '',
+                            });
                           }}
-                          className="text-[11px] text-primary hover:underline font-semibold"
+                          className="text-[11px] text-primary hover:underline font-semibold ml-2"
                         >
-                          + Add Fee
+                          Edit Course
                         </button>
                       )}
 
-                      <button
-                        onClick={() => setCourseToDelete(c.id)}
-                        className="text-[11px] text-destructive hover:underline font-semibold ml-2"
-                      >
-                        Delete Course
-                      </button>
+                      {canDelete && (
+                        <button
+                          onClick={() => setCourseToDelete(c.id)}
+                          className="text-[11px] text-destructive hover:underline font-semibold ml-2"
+                        >
+                          Delete Course
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
