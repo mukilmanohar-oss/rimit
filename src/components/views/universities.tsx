@@ -407,6 +407,23 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
     e.preventDefault();
     setSubmittingCourse(true);
     setError(null);
+
+    const cleanedName = courseForm.name.trim().toLowerCase();
+    const isDuplicate = detail?.courses?.some(
+      (c: any) => c.name.trim().toLowerCase() === cleanedName
+    );
+    if (isDuplicate) {
+      setError("A course with this name already exists under this university.");
+      setSubmittingCourse(false);
+      return;
+    }
+
+    if (!courseForm.university_share_percent) {
+      setError("University share percentage override is required.");
+      setSubmittingCourse(false);
+      return;
+    }
+
     try {
       await aggregator.createCourse({
         university: university.id,
@@ -597,7 +614,7 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">University Share % Override</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">University Share % Override *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -605,7 +622,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                   max="100"
                   value={courseForm.university_share_percent}
                   onChange={e => setCourseForm(prev => ({ ...prev, university_share_percent: e.target.value }))}
-                  placeholder="Leave blank to inherit university default"
+                  required
+                  placeholder="E.g., 75.00"
                   className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
                 />
               </div>

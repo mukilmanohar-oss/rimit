@@ -28,6 +28,14 @@ class CourseSerializer(serializers.ModelSerializer):
         name = attrs.get('name')
         university = attrs.get('university')
 
+        # Clean/strip name if provided
+        if name is not None:
+            cleaned_name = name.strip()
+            if not cleaned_name:
+                raise serializers.ValidationError({"name": "Course name cannot be blank."})
+            attrs['name'] = cleaned_name
+            name = cleaned_name
+
         # Fallback to existing instance values if not provided in the patch payload
         if self.instance:
             if name is None:
@@ -45,7 +53,7 @@ class CourseSerializer(serializers.ModelSerializer):
             
             if duplicate_qs.exists():
                 raise serializers.ValidationError({
-                    'name': 'A course with this name already exists for this university.'
+                    "name": "A course with this name already exists under this university."
                 })
 
         # ----------------------------------------------------
@@ -56,7 +64,7 @@ class CourseSerializer(serializers.ModelSerializer):
             share_pct = attrs.get('university_share_percent')
             if share_pct is None:
                 raise serializers.ValidationError({
-                    'university_share_percent': 'university_share_percent is required on course creation.'
+                    "university_share_percent": "University share percentage override is required."
                 })
         else:
             # On update: reject explicitly if present and null
