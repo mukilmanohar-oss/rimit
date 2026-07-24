@@ -14,6 +14,9 @@ from django.contrib.postgres.indexes import GinIndex
 from apps.common.models import UUIDModel, TimeStampedModel
 
 
+from django.db.models.functions import Lower
+
+
 class University(UUIDModel, TimeStampedModel):
     """
     Partner university profile.
@@ -25,7 +28,7 @@ class University(UUIDModel, TimeStampedModel):
       - accreditation (VARCHAR)  e.g., 'NAAC A+', 'UGC'
       - created_at (TIMESTAMP)
     """
-    name = models.CharField(max_length=300, unique=True, db_index=True)
+    name = models.CharField(max_length=300, db_index=True)
     state = models.CharField(max_length=100, db_index=True)
     accreditation = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
@@ -47,6 +50,13 @@ class University(UUIDModel, TimeStampedModel):
     class Meta:
         db_table = 'universities'
         ordering = ['name']
+        constraints = [
+            models.UniqueConstraint(
+                Lower('name'),
+                Lower('state'),
+                name='unique_university_name_state'
+            )
+        ]
 
     def __str__(self):
         return self.name
