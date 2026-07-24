@@ -149,6 +149,42 @@ class UniversitySerializer(serializers.ModelSerializer):
     def get_course_count(self, obj):
         return obj.courses.filter(is_active=True).count()
 
+    def validate(self, attrs):
+        name = attrs.get('name')
+        if name is not None:
+            name = name.strip()
+            attrs['name'] = name
+
+        state = attrs.get('state')
+        if state is not None:
+            state = state.strip()
+            attrs['state'] = state
+
+        # Resolve name and state for existing instance if not in payload
+        check_name = name
+        check_state = state
+
+        if self.instance:
+            if check_name is None:
+                check_name = self.instance.name
+            if check_state is None:
+                check_state = self.instance.state
+
+        if check_name and check_state:
+            duplicate_qs = University.objects.filter(
+                name__iexact=check_name,
+                state__iexact=check_state
+            )
+            if self.instance:
+                duplicate_qs = duplicate_qs.exclude(id=self.instance.id)
+
+            if duplicate_qs.exists():
+                raise serializers.ValidationError({
+                    'name': 'A university with this name already exists in the selected state.'
+                })
+
+        return attrs
+
 
 class UniversityDetailSerializer(UniversitySerializer):
     courses = CourseSerializer(many=True, read_only=True)
