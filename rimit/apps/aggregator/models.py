@@ -68,11 +68,15 @@ class Course(UUIDModel, TimeStampedModel):
     STREAM_PG = 'Postgraduate'
     STREAM_DIPLOMA = 'Diploma'
     STREAM_OPEN = 'Open Schooling'
+    STREAM_PG_DIPLOMA = 'PG Diploma'
+    STREAM_CERTIFICATION = 'Certification'
     STREAM_CHOICES = [
         (STREAM_UG, 'Undergraduate'),
         (STREAM_PG, 'Postgraduate'),
         (STREAM_DIPLOMA, 'Diploma'),
         (STREAM_OPEN, 'Open Schooling'),
+        (STREAM_PG_DIPLOMA, 'PG Diploma'),
+        (STREAM_CERTIFICATION, 'Certification'),
     ]
 
     university = models.ForeignKey(

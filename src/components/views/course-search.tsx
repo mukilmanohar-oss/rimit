@@ -185,6 +185,8 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
       Undergraduate: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
       Postgraduate: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
       Diploma: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+      'PG Diploma': 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300',
+      Certification: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
       'Open Schooling': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
     };
     return colors[stream] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
@@ -221,7 +223,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
           <div className="space-y-2.5">
             <label className="block text-xs font-semibold text-muted-foreground">Course Stream</label>
             <div className="space-y-2">
-              {['Undergraduate', 'Postgraduate', 'Diploma', 'Open Schooling'].map(stream => (
+              {['Undergraduate', 'Postgraduate', 'Diploma', 'PG Diploma', 'Certification', 'Open Schooling'].map(stream => (
                 <label key={stream} className="flex items-center gap-2.5 text-sm text-foreground cursor-pointer">
                   <input
                     type="checkbox"
@@ -607,6 +609,8 @@ function getDocTypeLabelOrColor(stream: string) {
     Undergraduate: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
     Postgraduate: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
     Diploma: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    'PG Diploma': 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300',
+    Certification: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
     'Open Schooling': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
   };
   return colors[stream] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';

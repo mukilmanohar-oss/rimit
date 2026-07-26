@@ -572,6 +572,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                     <option value="Undergraduate">Undergraduate</option>
                     <option value="Postgraduate">Postgraduate</option>
                     <option value="Diploma">Diploma</option>
+                    <option value="PG Diploma">PG Diploma</option>
+                    <option value="Certification">Certification</option>
                     <option value="Open Schooling">Open Schooling</option>
                   </select>
                 </div>
@@ -662,6 +664,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                     <option value="Undergraduate">Undergraduate</option>
                     <option value="Postgraduate">Postgraduate</option>
                     <option value="Diploma">Diploma</option>
+                    <option value="PG Diploma">PG Diploma</option>
+                    <option value="Certification">Certification</option>
                     <option value="Open Schooling">Open Schooling</option>
                   </select>
                 </div>
