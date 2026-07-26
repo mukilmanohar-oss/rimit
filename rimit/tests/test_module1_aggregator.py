@@ -179,6 +179,32 @@ class TestFeeStructureAPI(BaseAPITestCase):
         resp = client.get(f'/api/v1/fees?course={course1.id}')
         assert resp.data['count'] == 2
 
+    def test_create_and_retrieve_new_fee_types(self):
+        course = CourseFactory()
+        client = self.super_admin_client()
+        resp = client.post('/api/v1/fees', {
+            'course': str(course.id),
+            'fee_type': FeeStructure.FEE_COURSE,
+            'amount': '50000.00',
+            'currency': 'INR',
+            'is_active': True,
+        })
+        assert resp.status_code == status.HTTP_201_CREATED
+        SubCenterUniversityMapping.objects.create(sub_center=self.center_a, university=course.university)
+        resp = client.post('/api/v1/fees', {
+            'course': str(course.id),
+            'fee_type': FeeStructure.FEE_REGISTRATION,
+            'amount': '2000.00',
+            'currency': 'INR',
+            'is_active': True,
+        })
+        assert resp.status_code == status.HTTP_201_CREATED
+        client_counselor = self.counselor_client()
+        resp = client_counselor.get('/api/v1/courses')
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data['count'] == 1
+        assert float(resp.data['results'][0]['total_fee']) == 52000.00
+
 
 @pytest.mark.django_db
 class TestUniversityDocVault(BaseAPITestCase):

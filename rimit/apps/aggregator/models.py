@@ -125,6 +125,8 @@ class FeeStructure(UUIDModel, TimeStampedModel):
     """
     FEE_ADMISSION = 'admission'
     FEE_TUITION = 'tuition'
+    FEE_COURSE = 'course_fee'
+    FEE_REGISTRATION = 'registration_fee'
     FEE_EXAM = 'exam'
     FEE_LIBRARY = 'library'
     FEE_LAB = 'lab'
@@ -132,6 +134,8 @@ class FeeStructure(UUIDModel, TimeStampedModel):
     FEE_TYPE_CHOICES = [
         (FEE_ADMISSION, 'Admission Fee'),
         (FEE_TUITION, 'Tuition Fee'),
+        (FEE_COURSE, 'Course Fee'),
+        (FEE_REGISTRATION, 'Registration Fee'),
         (FEE_EXAM, 'Examination Fee'),
         (FEE_LIBRARY, 'Library Fee'),
         (FEE_LAB, 'Lab Fee'),

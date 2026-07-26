@@ -789,6 +789,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                               >
                                 <option value="admission">Admission Fee</option>
                                 <option value="tuition">Tuition Fee</option>
+                                <option value="course_fee">Course Fee</option>
+                                <option value="registration_fee">Registration Fee</option>
                                 <option value="exam">Examination Fee</option>
                                 <option value="library">Library Fee</option>
                                 <option value="lab">Lab Fee</option>
