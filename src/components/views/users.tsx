@@ -39,15 +39,24 @@ export function UsersView({ profile }: { profile: UserProfile }) {
       const params: Record<string, string> = {};
       if (subCenterFilter) params.sub_center = subCenterFilter;
 
-      const [uData, scData] = await Promise.all([
-        partners.listUsers(withPaging(params, { page, pageSize: DEFAULT_PAGE_SIZE })),
-        partners.listSubCenters({ page_size: '200' }),
-      ]);
-      setUsers(uData.results);
-      setTotalCount(uData.count || 0);
-      setCanNext(hasNextPage(uData));
-      setCanPrev(hasPrevPage(uData));
-      setSubCenters(scData.results);
+      if (profile.role === 'super_admin') {
+        const [uData, scData] = await Promise.all([
+          partners.listUsers(withPaging(params, { page, pageSize: DEFAULT_PAGE_SIZE })),
+          partners.listSubCenters({ page_size: '200' }),
+        ]);
+        setUsers(uData.results);
+        setTotalCount(uData.count || 0);
+        setCanNext(hasNextPage(uData));
+        setCanPrev(hasPrevPage(uData));
+        setSubCenters(scData.results);
+      } else {
+        const uData = await partners.listUsers(withPaging(params, { page, pageSize: DEFAULT_PAGE_SIZE }));
+        setUsers(uData.results);
+        setTotalCount(uData.count || 0);
+        setCanNext(hasNextPage(uData));
+        setCanPrev(hasPrevPage(uData));
+        setSubCenters([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load users');
     } finally {
@@ -89,7 +98,7 @@ export function UsersView({ profile }: { profile: UserProfile }) {
         password: '',
         email: '',
         phone: '',
-        role: 'counselor',
+        role: profile.role === 'super_admin' ? 'counselor' : 'subcenter',
         sub_center: '',
       });
       setShowForm(false);
@@ -198,27 +207,45 @@ export function UsersView({ profile }: { profile: UserProfile }) {
                 onChange={e => setForm(prev => ({ ...prev, role: e.target.value }))}
                 className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
               >
-                <option value="super_admin">Super Admin</option>
-                <option value="academic_head">Academic Head</option>
-                <option value="counselor">Counselor</option>
-                <option value="finance">Finance Officer</option>
-                <option value="subcenter">Sub-Center Admin</option>
+                {profile.role === 'super_admin' ? (
+                  <>
+                    <option value="super_admin">Super Admin</option>
+                    <option value="academic_head">Academic Head</option>
+                    <option value="counselor">Counselor</option>
+                    <option value="finance">Finance Officer</option>
+                    <option value="subcenter">Sub-Center Admin</option>
+                  </>
+                ) : (
+                  <>
+                    {editingUser && editingUser.role !== 'subcenter' && (
+                      <option value={editingUser.role}>
+                        {editingUser.role === 'counselor' ? 'Counselor' :
+                         editingUser.role === 'finance' ? 'Finance Officer' :
+                         editingUser.role === 'academic_head' ? 'Academic Head' :
+                         editingUser.role}
+                      </option>
+                    )}
+                    <option value="subcenter">Sub-Center Admin</option>
+                  </>
+                )}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Sub-Center Linkage</label>
-              <select
-                value={form.sub_center}
-                onChange={e => setForm(prev => ({ ...prev, sub_center: e.target.value }))}
-                disabled={form.role === 'super_admin'}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm disabled:opacity-50"
-              >
-                <option value="">No sub-center (HQ / Global)</option>
-                {subCenters.map(sc => (
-                  <option key={sc.id} value={sc.id}>{sc.name} ({sc.center_code})</option>
-                ))}
-              </select>
-            </div>
+            {profile.role === 'super_admin' ? (
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Sub-Center Linkage</label>
+                <select
+                  value={form.sub_center}
+                  onChange={e => setForm(prev => ({ ...prev, sub_center: e.target.value }))}
+                  disabled={form.role === 'super_admin'}
+                  className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm disabled:opacity-50"
+                >
+                  <option value="">No sub-center (HQ / Global)</option>
+                  {subCenters.map(sc => (
+                    <option key={sc.id} value={sc.id}>{sc.name} ({sc.center_code})</option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             <div className="pt-4 flex justify-end gap-2">
               <button
                 type="button"
@@ -250,7 +277,7 @@ export function UsersView({ profile }: { profile: UserProfile }) {
           <button
             onClick={() => {
               setEditingUser(null);
-              setForm({ username: '', email: '', role: 'counselor', sub_center: '', password: '', phone: '' });
+              setForm({ username: '', email: '', role: profile.role === 'super_admin' ? 'counselor' : 'subcenter', sub_center: '', password: '', phone: '' });
               setShowForm(true);
             }}
             className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium transition-colors"
@@ -260,23 +287,25 @@ export function UsersView({ profile }: { profile: UserProfile }) {
         )}
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
-        <select
-          value={subCenterFilter}
-          onChange={e => {
-            setSubCenterFilter(e.target.value);
-            setPage(1);
-          }}
-          className="px-3 py-2 rounded-md border border-input bg-background text-sm min-w-[200px]"
-        >
-          <option value="">All Sub-Centers</option>
-          {subCenters.map(sc => (
-            <option key={sc.id} value={sc.id}>
-              {sc.name} ({sc.center_code})
-            </option>
-          ))}
-        </select>
-      </div>
+      {profile.role === 'super_admin' && (
+        <div className="flex gap-3 mb-4 flex-wrap">
+          <select
+            value={subCenterFilter}
+            onChange={e => {
+              setSubCenterFilter(e.target.value);
+              setPage(1);
+            }}
+            className="px-3 py-2 rounded-md border border-input bg-background text-sm min-w-[200px]"
+          >
+            <option value="">All Sub-Centers</option>
+            {subCenters.map(sc => (
+              <option key={sc.id} value={sc.id}>
+                {sc.name} ({sc.center_code})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {loading ? <LoadingState /> : error ? <ErrorState message={error} /> :
         users.length === 0 ? <EmptyState message="No users found" /> : (
