@@ -17,7 +17,7 @@ export function LeadsView({ profile }: { profile: UserProfile }) {
     try {
       // lead_status != Converted to get only active leads. Wait, our API might not have `lead_status__ne`. Let's just fetch pending and followed-up.
       // Usually the API filters on lead_status. Let's just pass search.
-      const params = withPaging({ search, lead_status: 'Pending' }, { page, pageSize: DEFAULT_PAGE_SIZE });
+      const params = withPaging({ search, lead_status: 'Pending Payment' }, { page, pageSize: DEFAULT_PAGE_SIZE });
       const res = await admissions.listStudents(params);
 
       if (requestId !== requestIdRef.current) return;
@@ -114,7 +114,7 @@ export function LeadsView({ profile }: { profile: UserProfile }) {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      lead.lead_status === 'Pending' ? 'bg-amber-100 text-amber-800' :
+                      lead.lead_status === 'Pending Payment' ? 'bg-amber-100 text-amber-800' :
                       lead.lead_status === 'Follow-Up' ? 'bg-blue-100 text-blue-800' :
                       'bg-green-100 text-green-800'
                     }`}>
