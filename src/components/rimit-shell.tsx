@@ -339,7 +339,7 @@ export function PageHeader({ title, subtitle, action, breadcrumbs }: {
   breadcrumbs?: { label: string; onClick?: () => void }[];
 }) {
   return (
-    <div className="flex items-start justify-between mb-6 pb-4 border-b border-border">
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 pb-4 border-b border-border">
       <div>
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav className="flex text-xs text-muted-foreground mb-2 items-center space-x-2">
@@ -360,7 +360,7 @@ export function PageHeader({ title, subtitle, action, breadcrumbs }: {
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
         {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
       </div>
-      {action}
+      {action && <div className="w-full sm:w-auto">{action}</div>}
     </div>
   );
 }
