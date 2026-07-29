@@ -24,6 +24,23 @@ class SystemUserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ('id', 'is_mfa_verified', 'last_login_at', 'created_at', 'updated_at')
 
+    def validate(self, attrs):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            try:
+                su = SystemUser.objects.get(user=request.user)
+                if su.role == SystemUser.ROLE_SUBCENTER:
+                    # Enforce that sub_center matches current user's sub_center
+                    if 'sub_center' in attrs and attrs['sub_center'] != su.sub_center:
+                        raise serializers.ValidationError({"sub_center": "Cannot update sub-center to a different center."})
+                    # Block elevating user role to super admin
+                    if attrs.get('role') in (SystemUser.ROLE_SUPER_ADMIN,):
+                        raise serializers.ValidationError({"role": "Cannot update user role to Super Admin."})
+            except SystemUser.DoesNotExist:
+                pass
+        return attrs
+
+
 
 class SystemUserCreateSerializer(serializers.ModelSerializer):
     """Creates both Django User and SystemUser in one transaction."""
@@ -41,6 +58,28 @@ class SystemUserCreateSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             user = User.objects.create_user(username=username, email=validated_data['email'], password=password)
             return SystemUser.objects.create(user=user, **validated_data)
+
+    def to_representation(self, instance):
+        return SystemUserSerializer(instance, context=self.context).data
+
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            try:
+                su = SystemUser.objects.get(user=request.user)
+                if su.role == SystemUser.ROLE_SUBCENTER:
+                    if not su.sub_center:
+                        raise serializers.ValidationError({"sub_center": "Sub-Center Admins must have an assigned Sub-Center to create users."})
+                    # Enforce that sub_center matches current user's sub_center
+                    attrs['sub_center'] = su.sub_center
+                    # Sub-Center Admin can only create other Sub-Center Admin users
+                    if attrs.get('role') != SystemUser.ROLE_SUBCENTER:
+                        raise serializers.ValidationError({"role": "Sub-Center Admins can only create other Sub-Center Admin users."})
+            except SystemUser.DoesNotExist:
+                pass
+        return attrs
+
 
 
 class SubCenterUniversityMappingSerializer(serializers.ModelSerializer):
