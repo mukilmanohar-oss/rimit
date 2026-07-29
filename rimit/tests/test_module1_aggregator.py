@@ -142,6 +142,67 @@ class TestCourseSearch(BaseAPITestCase):
         # total_fee = 50000 + 5000 = 55000
         assert float(resp.data['results'][0]['total_fee']) == 55000.0
 
+    def test_course_creation_with_new_streams(self):
+        uni = UniversityFactory()
+        client = self.super_admin_client()
+
+        # Test PG Diploma Course Creation
+        resp_pgd = client.post('/api/v1/courses', {
+            'university': str(uni.id),
+            'name': 'Executive PG Diploma',
+            'stream': 'PG Diploma',
+            'duration_months': 12,
+            'university_share_percent': '15.00',
+            'eligibility_text': 'Graduation with 50%',
+            'is_active': True,
+        })
+        assert resp_pgd.status_code == status.HTTP_201_CREATED, resp_pgd.content
+        assert Course.objects.filter(name='Executive PG Diploma', stream='PG Diploma').exists()
+
+        # Test Certification Course Creation
+        resp_cert = client.post('/api/v1/courses', {
+            'university': str(uni.id),
+            'name': 'Cloud Computing Certification',
+            'stream': 'Certification',
+            'duration_months': 6,
+            'university_share_percent': '10.00',
+            'eligibility_text': '10+2',
+            'is_active': True,
+        })
+        assert resp_cert.status_code == status.HTTP_201_CREATED, resp_cert.content
+        assert Course.objects.filter(name='Cloud Computing Certification', stream='Certification').exists()
+
+        # Test Invalid Stream Rejection
+        resp_invalid = client.post('/api/v1/courses', {
+            'university': str(uni.id),
+            'name': 'Invalid Stream Course',
+            'stream': 'Random Stream',
+            'duration_months': 6,
+            'university_share_percent': '10.00',
+        })
+        assert resp_invalid.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_course_filter_by_new_streams(self):
+        uni = UniversityFactory()
+        SubCenterUniversityMapping.objects.create(sub_center=self.center_a, university=uni)
+        CourseFactory(university=uni, stream='PG Diploma', name='PGD 1')
+        CourseFactory(university=uni, stream='Certification', name='Cert 1')
+        CourseFactory(university=uni, stream=Course.STREAM_UG, name='UG 1')
+
+        client = self.counselor_client()
+
+        # Filter by PG Diploma
+        resp_pgd = client.get('/api/v1/courses?stream=PG Diploma')
+        assert resp_pgd.status_code == status.HTTP_200_OK
+        assert resp_pgd.data['count'] == 1
+        assert resp_pgd.data['results'][0]['name'] == 'PGD 1'
+
+        # Filter by Certification
+        resp_cert = client.get('/api/v1/courses?stream=Certification')
+        assert resp_cert.status_code == status.HTTP_200_OK
+        assert resp_cert.data['count'] == 1
+        assert resp_cert.data['results'][0]['name'] == 'Cert 1'
+
 
 @pytest.mark.django_db
 class TestFeeStructureAPI(BaseAPITestCase):
