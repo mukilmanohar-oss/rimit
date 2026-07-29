@@ -146,13 +146,24 @@ class RazorpayPaymentWebhookView(APIView):
                 )
 
                 if created:
-                    # Auto-transition enrollment to Fee Paid
-                    if enrollment.can_transition_to(Enrollment.STATUS_FEE_PAID):
-                        enrollment.status = Enrollment.STATUS_FEE_PAID
-                        enrollment.save()
-                        # Trigger receipt generation + WhatsApp notification
+                    is_repayment = PaymentLedger.all_objects.filter(
+                        enrollment=enrollment,
+                        status=PaymentLedger.STATUS_CAPTURED
+                    ).exclude(transaction_ref=transaction_ref).exists()
+
+                    if not is_repayment:
+                        # Auto-transition enrollment to Fee Paid
+                        if enrollment.can_transition_to(Enrollment.STATUS_FEE_PAID):
+                            enrollment.status = Enrollment.STATUS_FEE_PAID
+                            enrollment.save()
+                            # Trigger receipt generation + WhatsApp notification
+                            from apps.notifications.tasks import notify_payment_captured
+                            notify_payment_captured.delay(str(ledger.id))
+                    else:
+                        # For repayment, trigger receipt generation but keep status unchanged
                         from apps.notifications.tasks import notify_payment_captured
                         notify_payment_captured.delay(str(ledger.id))
+
 
             except Enrollment.DoesNotExist:
                 logger.error(f'Razorpay webhook for unknown enrollment: {enrollment_id}')

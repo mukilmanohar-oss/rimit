@@ -302,6 +302,11 @@ function EnrollmentDetail({
   const [error, setError] = useState<string | null>(null);
   const [cancelDialog, setCancelDialog] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<string | null>(null);
+  const [showRepaymentModal, setShowRepaymentModal] = useState(false);
+  const [repaymentInfo, setRepaymentInfo] = useState<{ course_total_fee: string; registration_fee: string; repayment_amount: string } | null>(null);
+  const [repaymentLoading, setRepaymentLoading] = useState(false);
+  const [repaymentCheckoutLoading, setRepaymentCheckoutLoading] = useState(false);
+  const [repaymentError, setRepaymentError] = useState<string | null>(null);
 
   // Statuses restricted to super_admin only
   const SUPER_ADMIN_ONLY_STATUSES = ['Fee Paid', 'Enrolled', 'Enrollment Generated'];
@@ -313,6 +318,34 @@ function EnrollmentDetail({
       setTimeline(data.timeline || []);
     } catch {
       // ignore timeline load errors
+    }
+  };
+
+  const loadRepaymentInfo = async () => {
+    setRepaymentLoading(true);
+    setRepaymentError(null);
+    try {
+      const info = await admissions.getRepaymentInfo(detail.id);
+      setRepaymentInfo(info);
+    } catch (err) {
+      setRepaymentError(err instanceof Error ? err.message : "Failed to load repayment information.");
+    } finally {
+      setRepaymentLoading(false);
+    }
+  };
+
+  const handleRepaymentCheckout = async () => {
+    setRepaymentCheckoutLoading(true);
+    setRepaymentError(null);
+    try {
+      const res = await admissions.initiateRepaymentCheckout(detail.id);
+      if (res.gateway_redirect_url) {
+        window.location.href = res.gateway_redirect_url;
+      }
+    } catch (err) {
+      setRepaymentError(err instanceof Error ? err.message : "Repayment checkout failed.");
+    } finally {
+      setRepaymentCheckoutLoading(false);
     }
   };
 
@@ -485,6 +518,19 @@ function EnrollmentDetail({
                 </button>
               </div>
             )}
+            {detail.status === 'Enrollment Generated' && (
+              <div className="mb-4">
+                <button
+                  onClick={() => {
+                    setShowRepaymentModal(true);
+                    loadRepaymentInfo();
+                  }}
+                  className="w-full bg-primary text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/95 transition"
+                >
+                  Re-payment
+                </button>
+              </div>
+            )}
             <div className="space-y-2">
               {['Applied', 'Document Verified', 'Fee Pending', 'Fee Paid', 'Enrolled', 'Enrollment Generated'].map(s => {
                 const isCurrent = detail.status === s;
@@ -621,6 +667,57 @@ function EnrollmentDetail({
           }}
           onCancel={() => setPendingTransition(null)}
         />
+      )}
+
+      {showRepaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background border border-border p-6 rounded-lg shadow-lg max-w-sm w-full">
+            <h3 className="text-lg font-bold mb-4">Re-payment Details</h3>
+
+            {repaymentLoading && <p className="text-sm text-muted-foreground">Loading repayment details...</p>}
+
+            {repaymentError && <p className="text-sm text-destructive mb-4">{repaymentError}</p>}
+
+            {!repaymentLoading && repaymentInfo && (
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Course Total Fee:</span>
+                  <span className="font-semibold text-foreground">₹{parseFloat(repaymentInfo.course_total_fee).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Registration Fee:</span>
+                  <span className="font-semibold text-foreground">₹{parseFloat(repaymentInfo.registration_fee).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="border-t border-border pt-3 flex justify-between text-sm font-bold">
+                  <span className="text-foreground">Re-payment Amount:</span>
+                  <span className="text-primary">₹{parseFloat(repaymentInfo.repayment_amount).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowRepaymentModal(false);
+                  setRepaymentInfo(null);
+                  setRepaymentError(null);
+                }}
+                className="px-4 py-2 text-sm font-medium border border-border hover:bg-muted rounded-md"
+              >
+                Close
+              </button>
+              {!repaymentLoading && repaymentInfo && (
+                <button
+                  onClick={handleRepaymentCheckout}
+                  disabled={repaymentCheckoutLoading || parseFloat(repaymentInfo.repayment_amount) <= 0}
+                  className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/95 rounded-md disabled:opacity-50"
+                >
+                  {repaymentCheckoutLoading ? 'Processing...' : 'Pay'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

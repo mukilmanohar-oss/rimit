@@ -97,6 +97,13 @@ class InvoiceLineItem(UUIDModel, TimeStampedModel):
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='line_items')
     student = models.ForeignKey('admissions.Student', on_delete=models.PROTECT, related_name='invoice_line_items')
     course = models.ForeignKey('aggregator.Course', on_delete=models.PROTECT, null=True, blank=True, related_name='invoice_line_items')
+    enrollment = models.ForeignKey(
+        'admissions.Enrollment',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payment_line_items'
+    )
 
     # Locked fee at time of checkout (sum of course fee structures).
     course_fee = models.DecimalField(max_digits=12, decimal_places=2, help_text="Locked total course fee at time of checkout")
