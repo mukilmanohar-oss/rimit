@@ -209,7 +209,11 @@ export function LandingPageV2({ onLogin }: LandingPageV2Props) {
                     <button onClick={toggleDarkMode} className="text-gray-500 dark:text-gray-300">
                         <i className="fa-solid fa-moon text-xl" id="mobileDarkModeIcon"></i>
                     </button>
-                    <button id="mobileMenuBtn" className="text-bosse-blue dark:text-white focus:outline-none text-2xl">
+                    <button 
+                        id="mobileMenuBtn" 
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+                        className="text-bosse-blue dark:text-white focus:outline-none text-2xl"
+                    >
                         <i className="fa-solid fa-bars"></i>
                     </button>
                 </div>
@@ -217,12 +221,12 @@ export function LandingPageV2({ onLogin }: LandingPageV2Props) {
         </div>
         
         {/* Mobile Menu Dropdown */}
-        <div id="mobileMenu" className="hidden md:hidden bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 absolute w-full shadow-lg">
+        <div id="mobileMenu" className={`${isMobileMenuOpen ? '' : 'hidden'} md:hidden bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 absolute w-full shadow-lg`}>
             <div className="px-4 pt-2 pb-6 space-y-2 text-center">
-                <a href="#offerings" className="block px-3 py-3 text-gray-700 dark:text-gray-200 hover:text-bosse-blue font-medium">Offerings</a>
-                <a href="#tiers" className="block px-3 py-3 text-gray-700 dark:text-gray-200 hover:text-bosse-blue font-medium">Tiers</a>
-                <a href="#roi" className="block px-3 py-3 text-gray-700 dark:text-gray-200 hover:text-bosse-blue font-medium">Calculator</a>
-                <button onClick={() => setIsLoginModalOpen(true)} className="w-full mt-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white px-6 py-3 rounded-xl font-medium">Partner Login</button>
+                <a href="#offerings" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-3 text-gray-700 dark:text-gray-200 hover:text-bosse-blue font-medium">Offerings</a>
+                <a href="#tiers" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-3 text-gray-700 dark:text-gray-200 hover:text-bosse-blue font-medium">Tiers</a>
+                <a href="#roi" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-3 text-gray-700 dark:text-gray-200 hover:text-bosse-blue font-medium">Calculator</a>
+                <button onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }} className="w-full mt-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white px-6 py-3 rounded-xl font-medium">Partner Login</button>
             </div>
         </div>
     </nav>

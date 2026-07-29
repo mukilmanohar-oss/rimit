@@ -96,6 +96,140 @@ class TestUniversityAPI(BaseAPITestCase):
         assert 'Active Uni' in names
         assert 'Inactive Uni' in names
 
+    def test_create_unique_name_and_state_success(self):
+        client = self.super_admin_client()
+        resp = client.post('/api/v1/universities', {
+            'name': 'Amity University',
+            'state': 'Kerala',
+            'accreditation': 'UGC',
+            'is_active': True,
+        })
+        assert resp.status_code == status.HTTP_201_CREATED
+
+    def test_create_duplicate_name_same_state_failure(self):
+        UniversityFactory(name='Amity University', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.post('/api/v1/universities', {
+            'name': 'Amity University',
+            'state': 'Kerala',
+            'accreditation': 'UGC',
+        })
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'A university with this name already exists in the selected state.' in str(resp.data)
+
+    def test_create_duplicate_name_different_casing_same_state_failure(self):
+        UniversityFactory(name='Amity University', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.post('/api/v1/universities', {
+            'name': 'amity university',
+            'state': 'Kerala',
+            'accreditation': 'UGC',
+        })
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'A university with this name already exists in the selected state.' in str(resp.data)
+
+    def test_create_same_name_different_state_success(self):
+        UniversityFactory(name='Amity University', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.post('/api/v1/universities', {
+            'name': 'Amity University',
+            'state': 'Karnataka',
+            'accreditation': 'UGC',
+        })
+        assert resp.status_code == status.HTTP_201_CREATED
+
+    def test_update_keep_existing_values_success(self):
+        uni = UniversityFactory(name='Amity University', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/universities/{uni.id}', {
+            'accreditation': 'NAAC A++',
+        })
+        assert resp.status_code == status.HTTP_200_OK
+        uni.refresh_from_db()
+        assert uni.accreditation == 'NAAC A++'
+
+    def test_update_rename_to_duplicate_in_same_state_failure(self):
+        uni1 = UniversityFactory(name='Amity University', state='Kerala')
+        uni2 = UniversityFactory(name='LPU', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/universities/{uni2.id}', {
+            'name': 'AMITY UNIVERSITY',
+        })
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'A university with this name already exists in the selected state.' in str(resp.data)
+
+    def test_update_rename_to_duplicate_in_different_state_success(self):
+        uni1 = UniversityFactory(name='Amity University', state='Kerala')
+        uni2 = UniversityFactory(name='LPU', state='Karnataka')
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/universities/{uni2.id}', {
+            'name': 'Amity University',
+        })
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_update_change_state_only_success(self):
+        uni = UniversityFactory(name='Amity University', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/universities/{uni.id}', {
+            'state': 'Karnataka',
+        })
+        assert resp.status_code == status.HTTP_200_OK
+        uni.refresh_from_db()
+        assert uni.state == 'Karnataka'
+
+    def test_update_name_only_success(self):
+        uni = UniversityFactory(name='Amity University', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/universities/{uni.id}', {
+            'name': 'Amity New Name',
+        })
+        assert resp.status_code == status.HTTP_200_OK
+        uni.refresh_from_db()
+        assert uni.name == 'Amity New Name'
+
+    def test_partial_patch_conflict_checks(self):
+        UniversityFactory(name='Amity University', state='Kerala')
+        uni2 = UniversityFactory(name='LPU', state='Karnataka')
+        client = self.super_admin_client()
+
+        # Update name only to conflict with another university in a different state (should succeed)
+        resp1 = client.patch(f'/api/v1/universities/{uni2.id}', {
+            'name': 'Amity University',
+        })
+        assert resp1.status_code == status.HTTP_200_OK
+
+        # Update state only to conflict with another university of the same name (should fail)
+        resp2 = client.patch(f'/api/v1/universities/{uni2.id}', {
+            'state': 'Kerala',
+        })
+        assert resp2.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'A university with this name already exists in the selected state.' in str(resp2.data)
+
+    def test_edge_cases_whitespace_and_special_chars(self):
+        uni = UniversityFactory(name='ABC University', state='Kerala')
+        client = self.super_admin_client()
+
+        # Leading/trailing spaces create
+        resp = client.post('/api/v1/universities', {
+            'name': ' ABC University ',
+            'state': ' Kerala ',
+        })
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+        # Unicode/Special chars create unique
+        resp2 = client.post('/api/v1/universities', {
+            'name': 'Universität-1!',
+            'state': 'München',
+        })
+        assert resp2.status_code == status.HTTP_201_CREATED
+
+        # Duplicate Unicode
+        resp3 = client.post('/api/v1/universities', {
+            'name': 'universität-1!',
+            'state': 'München',
+        })
+        assert resp3.status_code == status.HTTP_400_BAD_REQUEST
+
 
 @pytest.mark.django_db
 class TestCourseSearch(BaseAPITestCase):
@@ -142,6 +276,67 @@ class TestCourseSearch(BaseAPITestCase):
         # total_fee = 50000 + 5000 = 55000
         assert float(resp.data['results'][0]['total_fee']) == 55000.0
 
+    def test_course_creation_with_new_streams(self):
+        uni = UniversityFactory()
+        client = self.super_admin_client()
+
+        # Test PG Diploma Course Creation
+        resp_pgd = client.post('/api/v1/courses', {
+            'university': str(uni.id),
+            'name': 'Executive PG Diploma',
+            'stream': 'PG Diploma',
+            'duration_months': 12,
+            'university_share_percent': '15.00',
+            'eligibility_text': 'Graduation with 50%',
+            'is_active': True,
+        })
+        assert resp_pgd.status_code == status.HTTP_201_CREATED, resp_pgd.content
+        assert Course.objects.filter(name='Executive PG Diploma', stream='PG Diploma').exists()
+
+        # Test Certification Course Creation
+        resp_cert = client.post('/api/v1/courses', {
+            'university': str(uni.id),
+            'name': 'Cloud Computing Certification',
+            'stream': 'Certification',
+            'duration_months': 6,
+            'university_share_percent': '10.00',
+            'eligibility_text': '10+2',
+            'is_active': True,
+        })
+        assert resp_cert.status_code == status.HTTP_201_CREATED, resp_cert.content
+        assert Course.objects.filter(name='Cloud Computing Certification', stream='Certification').exists()
+
+        # Test Invalid Stream Rejection
+        resp_invalid = client.post('/api/v1/courses', {
+            'university': str(uni.id),
+            'name': 'Invalid Stream Course',
+            'stream': 'Random Stream',
+            'duration_months': 6,
+            'university_share_percent': '10.00',
+        })
+        assert resp_invalid.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_course_filter_by_new_streams(self):
+        uni = UniversityFactory()
+        SubCenterUniversityMapping.objects.create(sub_center=self.center_a, university=uni)
+        CourseFactory(university=uni, stream='PG Diploma', name='PGD 1')
+        CourseFactory(university=uni, stream='Certification', name='Cert 1')
+        CourseFactory(university=uni, stream=Course.STREAM_UG, name='UG 1')
+
+        client = self.counselor_client()
+
+        # Filter by PG Diploma
+        resp_pgd = client.get('/api/v1/courses?stream=PG Diploma')
+        assert resp_pgd.status_code == status.HTTP_200_OK
+        assert resp_pgd.data['count'] == 1
+        assert resp_pgd.data['results'][0]['name'] == 'PGD 1'
+
+        # Filter by Certification
+        resp_cert = client.get('/api/v1/courses?stream=Certification')
+        assert resp_cert.status_code == status.HTTP_200_OK
+        assert resp_cert.data['count'] == 1
+        assert resp_cert.data['results'][0]['name'] == 'Cert 1'
+
 
 @pytest.mark.django_db
 class TestFeeStructureAPI(BaseAPITestCase):
@@ -178,6 +373,32 @@ class TestFeeStructureAPI(BaseAPITestCase):
         client = self.counselor_client()
         resp = client.get(f'/api/v1/fees?course={course1.id}')
         assert resp.data['count'] == 2
+
+    def test_create_and_retrieve_new_fee_types(self):
+        course = CourseFactory()
+        client = self.super_admin_client()
+        resp = client.post('/api/v1/fees', {
+            'course': str(course.id),
+            'fee_type': FeeStructure.FEE_COURSE,
+            'amount': '50000.00',
+            'currency': 'INR',
+            'is_active': True,
+        })
+        assert resp.status_code == status.HTTP_201_CREATED
+        SubCenterUniversityMapping.objects.create(sub_center=self.center_a, university=course.university)
+        resp = client.post('/api/v1/fees', {
+            'course': str(course.id),
+            'fee_type': FeeStructure.FEE_REGISTRATION,
+            'amount': '2000.00',
+            'currency': 'INR',
+            'is_active': True,
+        })
+        assert resp.status_code == status.HTTP_201_CREATED
+        client_counselor = self.counselor_client()
+        resp = client_counselor.get('/api/v1/courses')
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data['count'] == 1
+        assert float(resp.data['results'][0]['total_fee']) == 52000.00
 
 
 @pytest.mark.django_db

@@ -116,12 +116,12 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
         title="Leads & Students"
         subtitle={profile.sub_center_code ? `Sub-center: ${profile.sub_center_code}` : 'All sub-centers'}
         action={
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             {selectedForCheckout.size > 0 && (
               <button
                 onClick={handleBatchCheckout}
                 disabled={checkoutLoading}
-                className="bg-green-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+                className="bg-green-600 text-white rounded-md px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium hover:bg-green-700 disabled:opacity-50 flex-1 sm:flex-none text-center"
               >
                 {checkoutLoading ? "Processing..." : `Batch Checkout (${selectedForCheckout.size})`}
               </button>
@@ -129,7 +129,7 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
             {canCreate && (
               <button
                 onClick={() => setShowForm(true)}
-                className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90"
+                className="bg-primary text-primary-foreground rounded-md px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium hover:bg-primary/90 flex-1 sm:flex-none text-center"
               >
                 + Add Lead / Student
               </button>
@@ -138,102 +138,99 @@ export function StudentsView({ profile }: { profile: UserProfile }) {
         }
       />
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 w-full">
         <input
           type="text"
           placeholder="Search by name, phone, email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (setPage(1), load())}
-          className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full sm:flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
-        <select
-          value={activeFilter}
-          onChange={(e) => { setActiveFilter(e.target.value as any); setPage(1); }}
-          className="px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="all">All</option>
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="">All Statuses</option>
-          <option value="Pending Payment">Pending Payment</option>
-          <option value="Enrolled">Enrolled</option>
-        </select>
-        <button
-          onClick={() => { setPage(1); load(); }}
-          className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90"
-        >
-          Search
-        </button>
-        <button
-          onClick={handleExportCSV}
-          className="border border-border text-muted-foreground hover:text-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-muted"
-        >
-          Export CSV
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <div className="grid grid-cols-2 gap-3 w-full sm:flex sm:gap-3 sm:w-auto">
+            <select
+              value={activeFilter}
+              onChange={(e) => { setActiveFilter(e.target.value as any); setPage(1); }}
+              className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="all">All</option>
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">All Statuses</option>
+              <option value="Pending Payment">Pending Payment</option>
+              <option value="Enrolled">Enrolled</option>
+            </select>
+          </div>
+          <div className="flex gap-3 w-full sm:w-auto">
+            <button
+              onClick={() => { setPage(1); load(); }}
+              className="flex-1 sm:flex-none bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90 text-center"
+            >
+              Search
+            </button>
+            <button
+              onClick={handleExportCSV}
+              className="flex-1 sm:flex-none border border-border text-muted-foreground hover:text-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-muted text-center"
+            >
+              Export CSV
+            </button>
+          </div>
+        </div>
       </div>
 
       {loading ? <LoadingState /> : error ? <ErrorState message={error} /> :
         students.length === 0 ? <EmptyState message="No students found" /> : (
           <div className="space-y-4">
+            {/* Responsive Table View */}
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
-<table className="w-full text-sm">
-                <thead className="bg-muted/30 border-b border-border">
-                  <tr>
-                    <th className="w-10 px-4 py-3"></th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Name</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Phone</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">DOB</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Course</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Sub-center</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">ABC ID</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">DEB ID</th>
-                    {/* TODO: Status column hidden from Leads & Students table per product request. Filter, export, and underlying data are untouched — see feature/hide-student-status-column. */}
-                    {/*
-                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">Status</th>
-                    */}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {students.map(s => (
-                    <tr key={s.id} className="hover:bg-muted/20 cursor-pointer" onClick={() => setSelected(s)}>
-                      <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
-                        {s.lead_status === 'Pending Payment' && (
-                          <input
-                            type="checkbox"
-                            checked={selectedForCheckout.has(s.id)}
-                            onChange={(e) => handleToggleSelect(e as any, s.id)}
-                            className="rounded border-input text-primary focus:ring-primary cursor-pointer"
-                          />
-                        )}
-                      </td>
-                      <td className="px-4 py-3 font-medium text-foreground">{s.full_name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{s.primary_phone}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{new Date(s.dob).toLocaleDateString('en-IN')}</td>
-                      <td className="px-4 py-3 text-muted-foreground truncate max-w-[150px]" title={s.course_name || ''}>{s.course_name || '-'}</td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs bg-muted px-2 py-0.5 rounded">{s.sub_center_code || '-'}</span>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{s.abc_id || '-'}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{s.deb_id || '-'}</td>
-                      {/* TODO: Status badge cell hidden from Leads & Students table per product request. Filter, export, and underlying data are untouched — see feature/hide-student-status-column. */}
-                      {/*
-                      <td className="px-4 py-3 text-right">
-                        <StatusBadge status={s.lead_status || 'Pending Payment'} />
-                      </td>
-                      */}
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/30 border-b border-border">
+                    <tr>
+                      <th className="w-10 px-4 py-3"></th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">Name</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">Phone</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">DOB</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">Course</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">Sub-center</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">ABC ID</th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">DEB ID</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-</div>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {students.map(s => (
+                      <tr key={s.id} className="hover:bg-muted/20 cursor-pointer" onClick={() => setSelected(s)}>
+                        <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                          {s.lead_status === 'Pending Payment' && (
+                            <input
+                              type="checkbox"
+                              checked={selectedForCheckout.has(s.id)}
+                              onChange={(e) => handleToggleSelect(e as any, s.id)}
+                              className="rounded border-input text-primary focus:ring-primary cursor-pointer"
+                            />
+                          )}
+                        </td>
+                        <td className="px-4 py-3 font-medium text-foreground">{s.full_name}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{s.primary_phone}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{new Date(s.dob).toLocaleDateString('en-IN')}</td>
+                        <td className="px-4 py-3 text-muted-foreground truncate max-w-[150px]" title={s.course_name || ''}>{s.course_name || '-'}</td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs bg-muted px-2 py-0.5 rounded">{s.sub_center_code || '-'}</span>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{s.abc_id || '-'}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{s.deb_id || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="flex items-center justify-between py-2">

@@ -14,6 +14,9 @@ from django.contrib.postgres.indexes import GinIndex
 from apps.common.models import UUIDModel, TimeStampedModel
 
 
+from django.db.models.functions import Lower
+
+
 class University(UUIDModel, TimeStampedModel):
     """
     Partner university profile.
@@ -25,7 +28,7 @@ class University(UUIDModel, TimeStampedModel):
       - accreditation (VARCHAR)  e.g., 'NAAC A+', 'UGC'
       - created_at (TIMESTAMP)
     """
-    name = models.CharField(max_length=300, unique=True, db_index=True)
+    name = models.CharField(max_length=300, db_index=True)
     state = models.CharField(max_length=100, db_index=True)
     accreditation = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
@@ -47,6 +50,13 @@ class University(UUIDModel, TimeStampedModel):
     class Meta:
         db_table = 'universities'
         ordering = ['name']
+        constraints = [
+            models.UniqueConstraint(
+                Lower('name'),
+                Lower('state'),
+                name='unique_university_name_state'
+            )
+        ]
 
     def __str__(self):
         return self.name
@@ -68,11 +78,15 @@ class Course(UUIDModel, TimeStampedModel):
     STREAM_PG = 'Postgraduate'
     STREAM_DIPLOMA = 'Diploma'
     STREAM_OPEN = 'Open Schooling'
+    STREAM_PG_DIPLOMA = 'PG Diploma'
+    STREAM_CERTIFICATION = 'Certification'
     STREAM_CHOICES = [
         (STREAM_UG, 'Undergraduate'),
         (STREAM_PG, 'Postgraduate'),
         (STREAM_DIPLOMA, 'Diploma'),
         (STREAM_OPEN, 'Open Schooling'),
+        (STREAM_PG_DIPLOMA, 'PG Diploma'),
+        (STREAM_CERTIFICATION, 'Certification'),
     ]
 
     university = models.ForeignKey(
@@ -125,6 +139,8 @@ class FeeStructure(UUIDModel, TimeStampedModel):
     """
     FEE_ADMISSION = 'admission'
     FEE_TUITION = 'tuition'
+    FEE_COURSE = 'course_fee'
+    FEE_REGISTRATION = 'registration_fee'
     FEE_EXAM = 'exam'
     FEE_LIBRARY = 'library'
     FEE_LAB = 'lab'
@@ -132,6 +148,8 @@ class FeeStructure(UUIDModel, TimeStampedModel):
     FEE_TYPE_CHOICES = [
         (FEE_ADMISSION, 'Admission Fee'),
         (FEE_TUITION, 'Tuition Fee'),
+        (FEE_COURSE, 'Course Fee'),
+        (FEE_REGISTRATION, 'Registration Fee'),
         (FEE_EXAM, 'Examination Fee'),
         (FEE_LIBRARY, 'Library Fee'),
         (FEE_LAB, 'Lab Fee'),

@@ -19,6 +19,86 @@ class CourseSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('id', 'created_at', 'updated_at')
 
+    def validate(self, attrs):
+        is_create = self.instance is None
+
+        # ----------------------------------------------------
+        # Rule 1: Name Uniqueness (Per University, Case-Insensitive)
+        # ----------------------------------------------------
+        name = attrs.get('name')
+        university = attrs.get('university')
+
+        # Clean/strip name if provided
+        if name is not None:
+            cleaned_name = name.strip()
+            if not cleaned_name:
+                raise serializers.ValidationError({"name": "Course name cannot be blank."})
+            attrs['name'] = cleaned_name
+            name = cleaned_name
+
+        # Fallback to existing instance values if not provided in the patch payload
+        if self.instance:
+            if name is None:
+                name = self.instance.name
+            if university is None:
+                university = self.instance.university
+
+        if name and university:
+            duplicate_qs = Course.objects.filter(
+                name__iexact=name,
+                university=university
+            )
+            if self.instance:
+                duplicate_qs = duplicate_qs.exclude(id=self.instance.id)
+            
+            if duplicate_qs.exists():
+                raise serializers.ValidationError({
+                    "name": "A course with this name already exists under this university."
+                })
+
+        # ----------------------------------------------------
+        # Rule 2: University Share Percentage (using attrs)
+        # ----------------------------------------------------
+        if is_create:
+            # Required and cannot be null on creation
+            share_pct = attrs.get('university_share_percent')
+            if share_pct is None:
+                raise serializers.ValidationError({
+                    "university_share_percent": "University share percentage override is required."
+                })
+        else:
+            # On update: reject explicitly if present and null
+            if 'university_share_percent' in attrs:
+                share_pct_val = attrs.get('university_share_percent')
+                if share_pct_val is None:
+                    raise serializers.ValidationError({
+                        'university_share_percent': 'university_share_percent cannot be null on update.'
+                    })
+
+        # ----------------------------------------------------
+        # Rule 3: Stream Reclassification (using attrs & database state)
+        # ----------------------------------------------------
+        if not is_create:
+            # Force reclassification: if the resulting stream is 'Other', reject.
+            current_stream = attrs.get('stream', self.instance.stream)
+            if current_stream == 'Other':
+                raise serializers.ValidationError({
+                    'stream': 'Courses with stream "Other" must be reclassified to a valid stream on update.'
+                })
+
+        # ----------------------------------------------------
+        # Rule 4: Duration Months (Enforce > 0 if present)
+        # ----------------------------------------------------
+        # Enforce duration_months > 0 if key is present in attrs (Option A)
+        if 'duration_months' in attrs:
+            duration = attrs.get('duration_months')
+            if duration is None or duration <= 0:
+                raise serializers.ValidationError({
+                    'duration_months': 'duration_months must be greater than 0.'
+                })
+
+        return attrs
+
 
 class CourseListSerializer(serializers.ModelSerializer):
     """Serializer for list view."""
@@ -76,6 +156,42 @@ class UniversitySerializer(serializers.ModelSerializer):
 
     def get_course_count(self, obj):
         return obj.courses.filter(is_active=True).count()
+
+    def validate(self, attrs):
+        name = attrs.get('name')
+        if name is not None:
+            name = name.strip()
+            attrs['name'] = name
+
+        state = attrs.get('state')
+        if state is not None:
+            state = state.strip()
+            attrs['state'] = state
+
+        # Resolve name and state for existing instance if not in payload
+        check_name = name
+        check_state = state
+
+        if self.instance:
+            if check_name is None:
+                check_name = self.instance.name
+            if check_state is None:
+                check_state = self.instance.state
+
+        if check_name and check_state:
+            duplicate_qs = University.objects.filter(
+                name__iexact=check_name,
+                state__iexact=check_state
+            )
+            if self.instance:
+                duplicate_qs = duplicate_qs.exclude(id=self.instance.id)
+
+            if duplicate_qs.exists():
+                raise serializers.ValidationError({
+                    'name': 'A university with this name already exists in the selected state.'
+                })
+
+        return attrs
 
 
 class UniversityDetailSerializer(UniversitySerializer):

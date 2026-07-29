@@ -452,8 +452,9 @@ export const aggregator = {
   getCourseCommission: (id: string) =>
     apiFetch<CourseCommissionBreakdown>(`/courses/${id}/commission`),
   createCourse: (data: Partial<Course>) =>
-
     apiFetch<Course>('/courses', { method: 'POST', body: JSON.stringify(data) }),
+  updateCourse: (id: string, data: Partial<Course>) =>
+    apiFetch<Course>(`/courses/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   listFees: (courseId?: string) =>
     apiFetch<Paginated<FeeStructure>>(courseId ? `/fees?course=${courseId}` : '/fees'),
   createFee: (data: Partial<FeeStructure>) =>

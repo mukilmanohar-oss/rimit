@@ -29,10 +29,10 @@ PRIVILEGED_ROLES = [SA, AH]
 PERMISSION_MATRIX = {
     'university':       {'create': [SA],         'read': ALL_ROLES,       'update': [SA],         'delete': [SA]},
     'course':           {'create': [SA],         'read': ALL_ROLES,       'update': [SA],         'delete': [SA]},
-    'fee_structure':    {'create': [SA],         'read': [SA, AH, C, F],  'update': [SA],         'delete': [SA]},
+    'fee_structure':    {'create': [SA],         'read': [SA, AH, C, F, SC],  'update': [SA],         'delete': [SA]},
     'university_doc':   {'create': [SA],         'read': ALL_ROLES,       'update': [SA],         'delete': [SA]},
     'sub_center':       {'create': [SA],         'read': [SA, AH, C, F],  'update': [SA],         'delete': [SA]},
-    'system_user':      {'create': [SA],         'read': [SA],            'update': [SA],         'delete': [SA]},
+    'system_user':      {'create': [SA, SC],     'read': [SA, SC],        'update': [SA, SC],     'delete': [SA, SC]},
     'sc_uni_mapping':   {'create': [SA],         'read': [SA],            'update': [SA],         'delete': [SA]},
     'student':          {'create': [SA, AH, C, SC],  'read': ALL_ROLES,       'update': [SA, AH, C, SC],  'delete': [SA, AH, C, SC]},
     'student_doc':      {'create': [SA, AH, C, SC],  'read': [SA, AH, C, SC],     'update': [SA, AH, C, SC],  'delete': [SA, AH, C, SC],

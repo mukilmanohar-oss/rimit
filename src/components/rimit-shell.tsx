@@ -14,7 +14,7 @@ import {
 
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
-type View = 'dashboard' | 'universities' | 'course-search' | 'prospectus' | 'leads' | 'leads-create' | 'students' | 'enrollments' | 'sessions' | 'payments' | 'subcenters' | 'users' | 'tickets' | 'notification-logs' | 'lead-monitor' | 'checkout';
+type View = 'dashboard' | 'universities' | 'course-search' | 'prospectus' | 'leads' | 'leads-create' | 'students' | 'enrollments' | 'sessions' | 'payments' | 'subcenters' | 'users' | 'tickets' | 'notification-logs' | 'lead-monitor' | 'checkout' | 'change-password';
 
 interface AppShellProps {
   profile: UserProfile;
@@ -170,7 +170,7 @@ const NAV_ITEMS: { id: View; label: string; icon: string; roles: string[] }[] = 
   { id: 'payments', label: 'Payments', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z', roles: ['super_admin', 'academic_head', 'finance'] },
   { id: 'checkout', label: 'Batch Checkout', icon: 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z', roles: ['counselor', 'finance'] },
   { id: 'subcenters', label: 'Sub-Centers', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4', roles: ['super_admin'] },
-  { id: 'users', label: 'System Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', roles: ['super_admin'] },
+  { id: 'users', label: 'System Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', roles: ['super_admin', 'subcenter'] },
   { id: 'tickets', label: 'Support Tickets', icon: 'M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z', roles: ['super_admin', 'academic_head', 'counselor', 'finance'] },
   { id: 'lead-monitor', label: 'Lead Monitor', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', roles: ['super_admin', 'academic_head'] },
   { id: 'notification-logs', label: 'Notification Logs', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', roles: ['super_admin', 'academic_head', 'finance'] },
@@ -184,35 +184,7 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
   mobileMenuOpen?: boolean;
   setMobileMenuOpen?: (open: boolean) => void;
 }) {
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [changing, setChanging] = useState(false);
-  const [passError, setPassError] = useState<string | null>(null);
-  const [passSuccess, setPassSuccess] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match');
-      return;
-    }
-    setChanging(true);
-    try {
-      await auth.changePassword(oldPassword, newPassword);
-      toast.success('Password changed successfully');
-      setOldPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setShowPasswordModal(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to change password');
-    } finally {
-      setChanging(false);
-    }
-  };
 
   const roleLabel: Record<string, string> = {
     super_admin: 'Super Admin',
@@ -249,7 +221,12 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
               <p className="text-[10px] text-muted-foreground truncate">B2B Aggregator</p>
             </div>
           )}
-          <button onClick={() => setCollapsed(!collapsed)} className="hidden md:block text-muted-foreground hover:text-foreground p-1 mx-auto">
+          <button 
+            onClick={() => setCollapsed(!collapsed)} 
+            className={`hidden md:block text-muted-foreground hover:text-foreground p-1 ${
+              collapsed ? 'mx-auto' : ''
+            }`}
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
@@ -301,9 +278,16 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
           </div>
         )}
         <button
-          onClick={() => setShowPasswordModal(true)}
+          onClick={() => {
+            setView('change-password');
+            setMobileMenuOpen?.(false);
+          }}
           title="Change Password"
-          className={`w-full text-left px-3 py-2 mb-1 rounded-md text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition ${collapsed ? 'justify-center text-center' : ''}`}
+          className={`w-full text-left px-3 py-2 mb-1 rounded-md text-sm ${
+            view === 'change-password'
+              ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+              : 'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground'
+          } transition ${collapsed ? 'justify-center text-center' : ''}`}
         >
           {collapsed ? '🔑' : 'Change Password'}
         </button>
@@ -316,77 +300,7 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
         </button>
       </div>
 
-      {/* Password Change Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-card border border-border w-full max-w-sm rounded-lg shadow-lg p-6 space-y-4">
-            <div>
-              <h3 className="text-lg font-bold text-foreground">Change Password</h3>
-              <p className="text-xs text-muted-foreground">Update your account credentials</p>
-            </div>
 
-            {passError && (
-              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs p-2.5 rounded">
-                {passError}
-              </div>
-            )}
-            {passSuccess && (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs p-2.5 rounded">
-                {passSuccess}
-              </div>
-            )}
-
-            <form onSubmit={handlePasswordChange} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Current Password</label>
-                <input
-                  type="password"
-                  value={oldPassword}
-                  onChange={e => setOldPassword(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none"
-                />
-              </div>
-              <div className="flex gap-2 pt-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => { setShowPasswordModal(false); setPassError(null); setPassSuccess(null); }}
-                  className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={changing}
-                  className="bg-primary text-primary-foreground rounded-md px-4 py-1.5 text-xs font-medium hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {changing ? 'Updating...' : 'Update Password'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </aside>
     </>
   );
@@ -425,7 +339,7 @@ export function PageHeader({ title, subtitle, action, breadcrumbs }: {
   breadcrumbs?: { label: string; onClick?: () => void }[];
 }) {
   return (
-    <div className="flex items-start justify-between mb-6 pb-4 border-b border-border">
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 pb-4 border-b border-border">
       <div>
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav className="flex text-xs text-muted-foreground mb-2 items-center space-x-2">
@@ -446,7 +360,7 @@ export function PageHeader({ title, subtitle, action, breadcrumbs }: {
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
         {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
       </div>
-      {action}
+      {action && <div className="w-full sm:w-auto">{action}</div>}
     </div>
   );
 }

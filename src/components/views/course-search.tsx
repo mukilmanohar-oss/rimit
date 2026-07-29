@@ -185,6 +185,8 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
       Undergraduate: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
       Postgraduate: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
       Diploma: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+      'PG Diploma': 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300',
+      Certification: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
       'Open Schooling': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
     };
     return colors[stream] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
@@ -221,7 +223,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
           <div className="space-y-2.5">
             <label className="block text-xs font-semibold text-muted-foreground">Course Stream</label>
             <div className="space-y-2">
-              {['Undergraduate', 'Postgraduate', 'Diploma', 'Open Schooling'].map(stream => (
+              {['Undergraduate', 'Postgraduate', 'Diploma', 'PG Diploma', 'Certification', 'Open Schooling'].map(stream => (
                 <label key={stream} className="flex items-center gap-2.5 text-sm text-foreground cursor-pointer">
                   <input
                     type="checkbox"
@@ -319,24 +321,24 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                         <p className="text-xs text-muted-foreground">{course.university_name} ({course.university_state})</p>
                       </div>
 
-                      <div className="flex items-center gap-6 justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0">
-                        <div className="text-right">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 w-full md:w-auto">
+                        <div className="flex flex-row items-center justify-between sm:block text-left sm:text-right">
                           <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">Total Course Fee</p>
                           <p className="text-xl font-extrabold text-primary">₹{course.total_fee?.toLocaleString('en-IN') || 0}</p>
                         </div>
                         
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                           {can(profile.role, 'fee_structure', 'read') && (
                             <button
                               onClick={() => setExpandedCourse(isExpanded ? null : course.id)}
-                              className="px-3.5 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition"
+                              className="px-3.5 py-1.5 sm:py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition flex-1 sm:flex-none text-center min-w-[140px] sm:min-w-0"
                             >
                               {isExpanded ? 'Hide Fees' : 'View Fees'}
                             </button>
                           )}
                           <button
                             onClick={() => handleDownloadProspectus(course)}
-                            className="px-3.5 py-2 border border-border rounded-lg text-sm font-semibold text-primary hover:bg-primary/5 transition"
+                            className="px-3.5 py-1.5 sm:py-2 border border-border rounded-lg text-sm font-semibold text-primary hover:bg-primary/5 transition flex-1 sm:flex-none text-center min-w-[140px] sm:min-w-0"
                           >
                             Download Prospectus
                           </button>
@@ -345,7 +347,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                               setEnrollCourse(course);
                               setEnrollForm({ student: '', session: '' });
                             }}
-                            className="bg-primary text-primary-foreground px-3.5 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition"
+                            className="bg-primary text-primary-foreground px-3.5 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition flex-1 sm:flex-none text-center min-w-[110px] sm:min-w-0"
                           >
                             Quick Enroll
                           </button>
@@ -607,6 +609,8 @@ function getDocTypeLabelOrColor(stream: string) {
     Undergraduate: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
     Postgraduate: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
     Diploma: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    'PG Diploma': 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300',
+    Certification: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
     'Open Schooling': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
   };
   return colors[stream] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
