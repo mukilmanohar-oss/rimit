@@ -96,6 +96,140 @@ class TestUniversityAPI(BaseAPITestCase):
         assert 'Active Uni' in names
         assert 'Inactive Uni' in names
 
+    def test_create_unique_name_and_state_success(self):
+        client = self.super_admin_client()
+        resp = client.post('/api/v1/universities', {
+            'name': 'Amity University',
+            'state': 'Kerala',
+            'accreditation': 'UGC',
+            'is_active': True,
+        })
+        assert resp.status_code == status.HTTP_201_CREATED
+
+    def test_create_duplicate_name_same_state_failure(self):
+        UniversityFactory(name='Amity University', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.post('/api/v1/universities', {
+            'name': 'Amity University',
+            'state': 'Kerala',
+            'accreditation': 'UGC',
+        })
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'A university with this name already exists in the selected state.' in str(resp.data)
+
+    def test_create_duplicate_name_different_casing_same_state_failure(self):
+        UniversityFactory(name='Amity University', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.post('/api/v1/universities', {
+            'name': 'amity university',
+            'state': 'Kerala',
+            'accreditation': 'UGC',
+        })
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'A university with this name already exists in the selected state.' in str(resp.data)
+
+    def test_create_same_name_different_state_success(self):
+        UniversityFactory(name='Amity University', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.post('/api/v1/universities', {
+            'name': 'Amity University',
+            'state': 'Karnataka',
+            'accreditation': 'UGC',
+        })
+        assert resp.status_code == status.HTTP_201_CREATED
+
+    def test_update_keep_existing_values_success(self):
+        uni = UniversityFactory(name='Amity University', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/universities/{uni.id}', {
+            'accreditation': 'NAAC A++',
+        })
+        assert resp.status_code == status.HTTP_200_OK
+        uni.refresh_from_db()
+        assert uni.accreditation == 'NAAC A++'
+
+    def test_update_rename_to_duplicate_in_same_state_failure(self):
+        uni1 = UniversityFactory(name='Amity University', state='Kerala')
+        uni2 = UniversityFactory(name='LPU', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/universities/{uni2.id}', {
+            'name': 'AMITY UNIVERSITY',
+        })
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'A university with this name already exists in the selected state.' in str(resp.data)
+
+    def test_update_rename_to_duplicate_in_different_state_success(self):
+        uni1 = UniversityFactory(name='Amity University', state='Kerala')
+        uni2 = UniversityFactory(name='LPU', state='Karnataka')
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/universities/{uni2.id}', {
+            'name': 'Amity University',
+        })
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_update_change_state_only_success(self):
+        uni = UniversityFactory(name='Amity University', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/universities/{uni.id}', {
+            'state': 'Karnataka',
+        })
+        assert resp.status_code == status.HTTP_200_OK
+        uni.refresh_from_db()
+        assert uni.state == 'Karnataka'
+
+    def test_update_name_only_success(self):
+        uni = UniversityFactory(name='Amity University', state='Kerala')
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/universities/{uni.id}', {
+            'name': 'Amity New Name',
+        })
+        assert resp.status_code == status.HTTP_200_OK
+        uni.refresh_from_db()
+        assert uni.name == 'Amity New Name'
+
+    def test_partial_patch_conflict_checks(self):
+        UniversityFactory(name='Amity University', state='Kerala')
+        uni2 = UniversityFactory(name='LPU', state='Karnataka')
+        client = self.super_admin_client()
+
+        # Update name only to conflict with another university in a different state (should succeed)
+        resp1 = client.patch(f'/api/v1/universities/{uni2.id}', {
+            'name': 'Amity University',
+        })
+        assert resp1.status_code == status.HTTP_200_OK
+
+        # Update state only to conflict with another university of the same name (should fail)
+        resp2 = client.patch(f'/api/v1/universities/{uni2.id}', {
+            'state': 'Kerala',
+        })
+        assert resp2.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'A university with this name already exists in the selected state.' in str(resp2.data)
+
+    def test_edge_cases_whitespace_and_special_chars(self):
+        uni = UniversityFactory(name='ABC University', state='Kerala')
+        client = self.super_admin_client()
+
+        # Leading/trailing spaces create
+        resp = client.post('/api/v1/universities', {
+            'name': ' ABC University ',
+            'state': ' Kerala ',
+        })
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+        # Unicode/Special chars create unique
+        resp2 = client.post('/api/v1/universities', {
+            'name': 'Universität-1!',
+            'state': 'München',
+        })
+        assert resp2.status_code == status.HTTP_201_CREATED
+
+        # Duplicate Unicode
+        resp3 = client.post('/api/v1/universities', {
+            'name': 'universität-1!',
+            'state': 'München',
+        })
+        assert resp3.status_code == status.HTTP_400_BAD_REQUEST
+
 
 @pytest.mark.django_db
 class TestCourseSearch(BaseAPITestCase):
