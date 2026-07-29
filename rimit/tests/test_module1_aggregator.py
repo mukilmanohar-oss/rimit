@@ -400,6 +400,48 @@ class TestFeeStructureAPI(BaseAPITestCase):
         assert resp.data['count'] == 1
         assert float(resp.data['results'][0]['total_fee']) == 52000.00
 
+    def test_super_admin_can_patch_fee(self):
+        course = CourseFactory()
+        fee = FeeStructureFactory(course=course, fee_type=FeeStructure.FEE_TUITION, amount=50000)
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/fees/{fee.id}', {
+            'amount': '55000.00'
+        })
+        assert resp.status_code == status.HTTP_200_OK, resp.content
+        fee.refresh_from_db()
+        assert float(fee.amount) == 55000.00
+        assert fee.course == course
+        assert str(fee.id) == resp.data['id']
+
+    def test_counselor_cannot_patch_fee(self):
+        fee = FeeStructureFactory(fee_type=FeeStructure.FEE_TUITION, amount=50000)
+        client = self.counselor_client()
+        resp = client.patch(f'/api/v1/fees/{fee.id}', {
+            'amount': '55000.00'
+        })
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_unchanged_fee_type_can_be_saved(self):
+        course = CourseFactory()
+        fee = FeeStructureFactory(course=course, fee_type=FeeStructure.FEE_TUITION, amount=50000)
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/fees/{fee.id}', {
+            'fee_type': FeeStructure.FEE_TUITION,
+            'amount': '55000.00'
+        })
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_changing_to_duplicate_active_fee_type_fails(self):
+        course = CourseFactory()
+        fee1 = FeeStructureFactory(course=course, fee_type=FeeStructure.FEE_TUITION, amount=50000)
+        fee2 = FeeStructureFactory(course=course, fee_type=FeeStructure.FEE_ADMISSION, amount=5000)
+        client = self.super_admin_client()
+        resp = client.patch(f'/api/v1/fees/{fee2.id}', {
+            'fee_type': FeeStructure.FEE_TUITION
+        })
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'fee_type' in resp.data
+
 
 @pytest.mark.django_db
 class TestUniversityDocVault(BaseAPITestCase):

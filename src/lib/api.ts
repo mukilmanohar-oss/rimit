@@ -459,6 +459,8 @@ export const aggregator = {
     apiFetch<Paginated<FeeStructure>>(courseId ? `/fees?course=${courseId}` : '/fees'),
   createFee: (data: Partial<FeeStructure>) =>
     apiFetch<FeeStructure>('/fees', { method: 'POST', body: JSON.stringify(data) }),
+  updateFee: (id: string, data: Partial<FeeStructure>) =>
+    apiFetch<FeeStructure>(`/fees/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteUniversity: (id: string) =>
     apiFetch<void>(`/universities/${id}`, { method: 'DELETE' }),
   deleteCourse: (id: string) =>
