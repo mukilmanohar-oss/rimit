@@ -51,7 +51,7 @@ class UniversityViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
         if role != 'super_admin':
             qs = qs.filter(is_active=True)
 
-        if role in ('counselor', 'finance'):
+        if role in ('counselor', 'finance', 'subcenter'):
             from apps.common.middleware import _current_tenant_id
             from apps.partners.models import SubCenterUniversityMapping
             tenant_id = _current_tenant_id()
@@ -94,7 +94,7 @@ class CourseViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
             qs = qs.filter(is_active=True)
 
         # Sub-center visibility allow-list
-        if role in ('counselor', 'finance'):
+        if role in ('counselor', 'finance', 'subcenter'):
             from apps.common.middleware import _current_tenant_id
             from apps.partners.models import SubCenterUniversityMapping
             tenant_id = _current_tenant_id()
@@ -187,7 +187,7 @@ class FeeStructureViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
         from apps.common.permissions import _user_role
         role = _user_role(self.request)
         qs = super().get_queryset()
-        if role in ('counselor', 'finance'):
+        if role in ('counselor', 'finance', 'subcenter'):
             from apps.common.middleware import _current_tenant_id
             from apps.partners.models import SubCenterUniversityMapping
             tenant_id = _current_tenant_id()
@@ -247,7 +247,7 @@ class UniversityDocVaultViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
         from apps.common.permissions import _user_role
         role = _user_role(self.request)
         qs = super().get_queryset()
-        if role in ('counselor', 'finance'):
+        if role in ('counselor', 'finance', 'subcenter'):
             from apps.common.middleware import _current_tenant_id
             from apps.partners.models import SubCenterUniversityMapping
             tenant_id = _current_tenant_id()

@@ -442,3 +442,137 @@ class TestUniversityDocVault(BaseAPITestCase):
             's3_object_uri': 's3://bucket/attempt.pdf',
         })
         assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+class TestSubCenterUniversitiesAccess(BaseAPITestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.subcenter_client = self._client(SystemUser.ROLE_SUBCENTER, self.center_a)
+        
+        # Mapped university
+        self.uni_mapped = UniversityFactory(name="Mapped Uni", state="Kerala", is_active=True)
+        SubCenterUniversityMapping.objects.create(sub_center=self.center_a, university=self.uni_mapped)
+        self.course_mapped = CourseFactory(university=self.uni_mapped, name="Mapped Course", is_active=True)
+        self.fee_mapped = FeeStructureFactory(course=self.course_mapped, fee_type=FeeStructure.FEE_TUITION, amount=10000)
+        self.doc_mapped = UniversityDocVault.objects.create(
+            university=self.uni_mapped, doc_type='prospectus', title='Mapped Prospectus',
+            s3_object_uri='s3://bucket/mapped.pdf'
+        )
+
+        # Unmapped university
+        self.uni_unmapped = UniversityFactory(name="Unmapped Uni", state="Karnataka", is_active=True)
+        self.course_unmapped = CourseFactory(university=self.uni_unmapped, name="Unmapped Course", is_active=True)
+        self.fee_unmapped = FeeStructureFactory(course=self.course_unmapped, fee_type=FeeStructure.FEE_TUITION, amount=20000)
+        self.doc_unmapped = UniversityDocVault.objects.create(
+            university=self.uni_unmapped, doc_type='prospectus', title='Unmapped Prospectus',
+            s3_object_uri='s3://bucket/unmapped.pdf'
+        )
+
+    def test_subcenter_can_list_mapped_universities(self):
+        resp = self.subcenter_client.get('/api/v1/universities')
+        assert resp.status_code == status.HTTP_200_OK
+        names = [u['name'] for u in resp.data['results']]
+        assert "Mapped Uni" in names
+        assert "Unmapped Uni" not in names
+
+    def test_subcenter_cannot_retrieve_unmapped_university_directly(self):
+        resp = self.subcenter_client.get(f'/api/v1/universities/{self.uni_unmapped.id}')
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_subcenter_can_retrieve_mapped_university_directly(self):
+        resp = self.subcenter_client.get(f'/api/v1/universities/{self.uni_mapped.id}')
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data['name'] == "Mapped Uni"
+
+    def test_subcenter_sees_courses_only_from_mapped_universities(self):
+        resp = self.subcenter_client.get('/api/v1/courses')
+        assert resp.status_code == status.HTTP_200_OK
+        names = [c['name'] for c in resp.data['results']]
+        assert "Mapped Course" in names
+        assert "Unmapped Course" not in names
+
+    def test_subcenter_cannot_retrieve_course_belonging_to_unmapped_university_directly(self):
+        resp = self.subcenter_client.get(f'/api/v1/courses/{self.course_unmapped.id}')
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_subcenter_sees_fee_structures_only_for_mapped_university_courses(self):
+        resp = self.subcenter_client.get('/api/v1/fees')
+        assert resp.status_code == status.HTTP_200_OK
+        ids = [f['id'] for f in resp.data['results']]
+        assert str(self.fee_mapped.id) in ids
+        assert str(self.fee_unmapped.id) not in ids
+
+    def test_subcenter_cannot_retrieve_unmapped_fee_directly(self):
+        resp = self.subcenter_client.get(f'/api/v1/fees/{self.fee_unmapped.id}')
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_subcenter_cannot_post_university(self):
+        resp = self.subcenter_client.post('/api/v1/universities', {
+            'name': 'New SC Uni',
+            'state': 'Kerala',
+        })
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_subcenter_cannot_patch_university(self):
+        resp = self.subcenter_client.patch(f'/api/v1/universities/{self.uni_mapped.id}', {
+            'name': 'Changed',
+        })
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_subcenter_cannot_delete_university(self):
+        resp = self.subcenter_client.delete(f'/api/v1/universities/{self.uni_mapped.id}')
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_subcenter_cannot_post_patch_delete_course(self):
+        # Create
+        resp = self.subcenter_client.post('/api/v1/courses', {
+            'university': str(self.uni_mapped.id),
+            'name': 'New Course',
+            'stream': 'Undergraduate',
+            'duration_months': 36,
+        })
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+        # Update
+        resp = self.subcenter_client.patch(f'/api/v1/courses/{self.course_mapped.id}', {
+            'name': 'Changed Name',
+        })
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+        # Delete
+        resp = self.subcenter_client.delete(f'/api/v1/courses/{self.course_mapped.id}')
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_subcenter_cannot_post_patch_delete_fee(self):
+        # Create
+        resp = self.subcenter_client.post('/api/v1/fees', {
+            'course': str(self.course_mapped.id),
+            'fee_type': FeeStructure.FEE_TUITION,
+            'amount': '15000.00',
+        })
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+        # Update
+        resp = self.subcenter_client.patch(f'/api/v1/fees/{self.fee_mapped.id}', {
+            'amount': '12000.00',
+        })
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+        # Delete
+        resp = self.subcenter_client.delete(f'/api/v1/fees/{self.fee_mapped.id}')
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_subcenter_document_scoping(self):
+        # List
+        resp = self.subcenter_client.get('/api/v1/prospectus')
+        assert resp.status_code == status.HTTP_200_OK
+        titles = [d['title'] for d in resp.data['results']]
+        assert 'Mapped Prospectus' in titles
+        assert 'Unmapped Prospectus' not in titles
+
+        # Retrieve direct unmapped doc
+        resp = self.subcenter_client.get(f'/api/v1/prospectus/{self.doc_unmapped.id}')
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+

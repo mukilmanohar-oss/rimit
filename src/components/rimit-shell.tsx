@@ -159,7 +159,7 @@ export function LoginForm({ onLogin }: { onLogin: (profile: UserProfile) => void
 // ──────────────── Sidebar ────────────────
 const NAV_ITEMS: { id: View; label: string; icon: string; roles: string[] }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6', roles: ['super_admin', 'academic_head', 'counselor', 'finance'] },
-  { id: 'universities', label: 'Universities', icon: 'M12 14l9-5-9-5-9 5 9 5z M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z', roles: ['super_admin', 'academic_head', 'counselor', 'finance'] },
+  { id: 'universities', label: 'Universities', icon: 'M12 14l9-5-9-5-9 5 9 5z M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z', roles: ['super_admin', 'academic_head', 'counselor', 'finance', 'subcenter'] },
   { id: 'course-search', label: 'Course Search', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z', roles: ['super_admin', 'academic_head', 'counselor', 'finance', 'subcenter'] },
   { id: 'prospectus', label: 'Prospectus Library', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', roles: ['super_admin', 'academic_head', 'counselor', 'finance', 'subcenter'] },
   { id: 'leads-create', label: 'Lead Generator', icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z', roles: ['super_admin', 'academic_head', 'counselor'] },

@@ -377,7 +377,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
   const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
   const [feeToDelete, setFeeToDelete] = useState<string | null>(null);
 
-  const { canCreate, canUpdate, canDelete } = usePermissions(profile.role, 'course');
+  const { canCreate, canUpdate } = usePermissions(profile.role, 'course');
+  const { canDelete } = usePermissions(profile.role, 'university');
   const { canCreate: canCreateFee, canDelete: canDeleteFee } = usePermissions(profile.role, 'fee_structure');
 
   const loadDetail = async () => {
