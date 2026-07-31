@@ -126,14 +126,14 @@ class BatchCheckoutView(APIView):
         privileged = role in ('super_admin', 'academic_head')
 
         if privileged:
-            students = Student.objects.using('default').filter(
+            students = Student.all_objects.using('default').filter(
                 id__in=student_ids,
                 lead_status=Student.LEAD_STATUS_PENDING
             ).select_related('course', 'course__university', 'sub_center')
         else:
             if not tenant_id:
                 return Response({'error': 'No sub-center associated with your account.'}, status=403)
-            students = Student.objects.using('default').filter(
+            students = Student.all_objects.using('default').filter(
                 id__in=student_ids,
                 sub_center_id=tenant_id,
                 lead_status=Student.LEAD_STATUS_PENDING
@@ -197,10 +197,21 @@ class BatchCheckoutView(APIView):
                 total_sc_deducted += breakdown.sub_center_commission
                 total_net += breakdown.net_payable
 
+                from apps.admissions.models import Enrollment
+                try:
+                    exact_enrollment = Enrollment.all_objects.get(
+                        student=student,
+                        course=student.course,
+                        session=student.session
+                    )
+                except Enrollment.DoesNotExist:
+                    return Response({'error': f'Enrollment not found for student {student.full_name}'}, status=400)
+
                 li = InvoiceLineItem.objects.create(
                     invoice=invoice,
                     student=student,
                     course=course,
+                    enrollment=exact_enrollment,
                     course_fee=breakdown.total_fee,
                     university_share_percent=breakdown.university_share_percent,
                     university_share=breakdown.university_share,
@@ -268,26 +279,55 @@ class PaymentWebhookView(APIView):
         except Invoice.DoesNotExist:
             return Response({'error': 'Invoice not found'}, status=404)
 
-        with transaction.atomic():
-            txn = Transaction.objects.create(
-                invoice=invoice,
-                gateway_reference=gateway_ref,
-                amount_paid=invoice.net_payable_collected,
-                status=Transaction.STATUS_SUCCESS if status == 'success' else Transaction.STATUS_FAILED
-            )
-            
-            if status == 'success':
-                invoice.status = Invoice.STATUS_PAID
-                invoice.save(update_fields=['status'])
-                
-                # Run settlement SYNCHRONOUSLY for mock/dev
-                try:
-                    from apps.finance.tasks import process_ledger_settlement
-                    process_ledger_settlement(str(txn.id))
-                except ImportError:
-                    pass
-            else:
-                invoice.status = Invoice.STATUS_FAILED
-                invoice.save(update_fields=['status'])
-                
+        from django.db import IntegrityError
+        try:
+            with transaction.atomic():
+                txn = Transaction.objects.create(
+                    invoice=invoice,
+                    gateway_reference=gateway_ref,
+                    amount_paid=invoice.net_payable_collected,
+                    status=Transaction.STATUS_SUCCESS if status == 'success' else Transaction.STATUS_FAILED
+                )
+
+                if status == 'success':
+                    invoice.status = Invoice.STATUS_PAID
+                    invoice.save(update_fields=['status'])
+
+                    # Check if this invoice is a repayment invoice
+                    line_item = invoice.line_items.first()
+                    if line_item and line_item.enrollment:
+                        from apps.finance.models import PaymentLedger
+                        enrollment = line_item.enrollment
+                        is_repayment = PaymentLedger.all_objects.filter(
+                            enrollment=enrollment,
+                            status=PaymentLedger.STATUS_CAPTURED
+                        ).exclude(transaction_ref=gateway_ref).exists()
+
+                        if is_repayment:
+                            PaymentLedger.all_objects.get_or_create(
+                                transaction_ref=gateway_ref,
+                                defaults={
+                                    'enrollment': enrollment,
+                                    'sub_center': enrollment.sub_center,
+                                    'amount_paid': invoice.net_payable_collected,
+                                    'status': PaymentLedger.STATUS_CAPTURED,
+                                    'gateway_response': {"invoice_id": invoice_id}
+                                }
+                            )
+
+                    # Run settlement SYNCHRONOUSLY for mock/dev
+                    try:
+                        from apps.finance.tasks import process_ledger_settlement
+                        process_ledger_settlement(str(txn.id))
+                    except ImportError:
+                        pass
+                else:
+                    invoice.status = Invoice.STATUS_FAILED
+                    invoice.save(update_fields=['status'])
+        except IntegrityError:
+            exists = Transaction.objects.filter(gateway_reference=gateway_ref, status=Transaction.STATUS_SUCCESS).exists()
+            if exists:
+                return Response({'status': 'Webhook processed'}, status=200)
+            return Response({'error': 'Duplicate transaction reference'}, status=400)
+
         return Response({'status': 'Webhook processed'}, status=200)

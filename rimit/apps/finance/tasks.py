@@ -25,27 +25,32 @@ def process_ledger_settlement(transaction_id):
             student = line_item.student
             course = getattr(line_item, 'course', None) or student.course
             
-            # Update student status
-            if student.lead_status == Student.LEAD_STATUS_PENDING:
-                student.lead_status = Student.LEAD_STATUS_ENROLLED
-                student.save(update_fields=['lead_status'])
-            
-            fee = line_item.course_fee
+            # Check if this invoice is a repayment invoice
+            is_repayment = False
+            enrollment = line_item.enrollment
+            if enrollment:
+                from apps.finance.models import PaymentLedger
+                is_repayment = PaymentLedger.all_objects.filter(
+                    enrollment=enrollment,
+                    status=PaymentLedger.STATUS_CAPTURED
+                ).exclude(transaction_ref=txn.gateway_reference).exists()
+
+            # Update student status (only for initial payment)
+            if not is_repayment:
+                if student.lead_status == Student.LEAD_STATUS_PENDING:
+                    student.lead_status = Student.LEAD_STATUS_ENROLLED
+                    student.save(update_fields=['lead_status'])
 
             # Net Remittance Model:
-            # Use the locked breakdown stored on the invoice line item.
+            # Use the correct payout fields based on the latest models schema.
             UniversityPayoutLedger.objects.create(
                 sub_center_id=invoice.sub_center_id,  # Inherit tenant
-                invoice=invoice,
+                university=course.university,
                 transaction=txn,
-                student=student,
-                total_fee=fee,
-                university_share=line_item.university_share,
-                gross_pool=line_item.gross_pool,
-                sub_center_commission=line_item.sub_center_commission,
+                total_collected=line_item.net_payable,
                 rimit_commission=line_item.rimit_commission,
-                payable_to_university=line_item.university_share,
-                net_payable=line_item.net_payable,
+                payable_to_univ=line_item.university_share,
+                status='PENDING'
             )
             
             # Trigger PDF receipt (mocked)

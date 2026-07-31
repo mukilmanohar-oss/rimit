@@ -572,6 +572,10 @@ export const admissions = {
     apiFetch<Array<{ action_type: string; created_at: string; old_data: Record<string, unknown>; new_data: Record<string, unknown> }>>(`/enrollments/${id}/timeline`),
   getEnrollmentTimeline: (id: string) =>
     apiFetch<{ timeline: Array<{ action: string; timestamp: string; user_name?: string; old_data?: Record<string, any>; new_data?: Record<string, any>; notes?: string }> }>(`/enrollments/${id}/timeline`),
+  getRepaymentInfo: (id: string) =>
+    apiFetch<{ course_total_fee: string; registration_fee: string; repayment_amount: string }>(`/enrollments/${id}/repayment`),
+  initiateRepaymentCheckout: (id: string) =>
+    apiFetch<{ invoice_id: string; gateway_redirect_url: string }>(`/enrollments/${id}/repayment_checkout`, { method: 'POST' }),
 
   // Lead Conversion
   convertLead: (leadId: string) =>

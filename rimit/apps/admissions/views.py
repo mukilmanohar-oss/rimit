@@ -274,3 +274,98 @@ class EnrollmentViewSet(AuditLogMixin, TenantAwareViewMixin, viewsets.ModelViewS
 
         return Response(EnrollmentSerializer(enrollment).data)
 
+    @action(detail=True, methods=['get'], url_path='repayment')
+    def repayment(self, request, pk=None):
+        """Retrieve repayment information for a generated enrollment."""
+        from decimal import Decimal
+        from apps.aggregator.models import FeeStructure
+
+        enrollment = self.get_object()
+        if enrollment.status != Enrollment.STATUS_ENROLLMENT_GENERATED:
+            return Response(
+                {"detail": "Repayment is only available after enrollment has been generated."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        course = enrollment.course
+        active_fees = course.fees.filter(is_active=True)
+        course_total_fee = sum(f.amount for f in active_fees)
+
+        reg_fee_obj = active_fees.filter(fee_type=FeeStructure.FEE_REGISTRATION).first()
+        registration_fee = reg_fee_obj.amount if reg_fee_obj else Decimal('0.00')
+
+        repayment_amount = max(Decimal('0.00'), course_total_fee - registration_fee)
+
+        return Response({
+            "course_total_fee": str(course_total_fee),
+            "registration_fee": str(registration_fee),
+            "repayment_amount": str(repayment_amount)
+        })
+
+    @action(detail=True, methods=['post'], url_path='repayment_checkout')
+    def repayment_checkout(self, request, pk=None):
+        """Initiate a repayment checkout for a generated enrollment."""
+        from decimal import Decimal
+        from django.db import transaction
+        import uuid
+        from apps.aggregator.models import FeeStructure
+        from apps.finance.models import Invoice, InvoiceLineItem
+        from apps.finance.net_remittance import calculate_net_remittance
+
+        enrollment = self.get_object()
+        if enrollment.status != Enrollment.STATUS_ENROLLMENT_GENERATED:
+            return Response(
+                {"detail": "Repayment is only available after enrollment has been generated."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        course = enrollment.course
+        active_fees = course.fees.filter(is_active=True)
+        course_total_fee = sum(f.amount for f in active_fees)
+
+        reg_fee_obj = active_fees.filter(fee_type=FeeStructure.FEE_REGISTRATION).first()
+        registration_fee = reg_fee_obj.amount if reg_fee_obj else Decimal('0.00')
+
+        repayment_amount = max(Decimal('0.00'), course_total_fee - registration_fee)
+        if repayment_amount <= 0:
+            return Response({"detail": "Repayment amount must be positive."}, status=status.HTTP_400_BAD_REQUEST)
+
+        uni_pct = course.university_share_percent if course.university_share_percent is not None else course.university.default_university_share_percent
+
+        from apps.finance.models import SubCenterCommission
+        sc_comm = SubCenterCommission.objects.filter(sub_center=enrollment.sub_center, course=course).first()
+        sc_comm_pct = sc_comm.commission_percent if sc_comm else Decimal('0.00')
+
+        breakdown = calculate_net_remittance(
+            total_fee=repayment_amount,
+            university_share_percent=uni_pct,
+            sub_center_commission_percent=sc_comm_pct,
+        )
+
+        with transaction.atomic():
+            invoice = Invoice.objects.create(
+                sub_center=enrollment.sub_center,
+                gross_amount=repayment_amount,
+                sub_center_commission_deducted=breakdown.sub_center_commission,
+                net_payable_collected=breakdown.net_payable
+            )
+            InvoiceLineItem.objects.create(
+                invoice=invoice,
+                student=enrollment.student,
+                course=course,
+                enrollment=enrollment,
+                course_fee=repayment_amount,
+                university_share_percent=breakdown.university_share_percent,
+                university_share=breakdown.university_share,
+                gross_pool=breakdown.gross_pool,
+                sub_center_commission_percent=breakdown.sub_center_commission_percent,
+                sub_center_commission=breakdown.sub_center_commission,
+                rimit_commission=breakdown.rimit_commission,
+                net_payable=breakdown.net_payable,
+            )
+            gateway_token = uuid.uuid4().hex
+
+        return Response({
+            "invoice_id": str(invoice.id),
+            "gateway_redirect_url": f"https://mock-pg.com/checkout/{gateway_token}?invoice={invoice.id}"
+        })
