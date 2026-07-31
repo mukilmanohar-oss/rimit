@@ -1,7 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { partners, DEFAULT_PAGE_SIZE, withPaging, hasNextPage, hasPrevPage, type SubCenter, type UserProfile } from '@/lib/api';
+import {
+  partners,
+  aggregator,
+  DEFAULT_PAGE_SIZE,
+  withPaging,
+  hasNextPage,
+  hasPrevPage,
+  type SubCenter,
+  type UserProfile,
+  type SubCenterUniversityMapping,
+  type University
+} from '@/lib/api';
 import { PageHeader, LoadingState, ErrorState, EmptyState, StatusBadge } from '../rimit-shell';
 import { usePermissions } from '@/lib/permissions';
 
@@ -17,6 +28,18 @@ export function SubCentersView({ profile }: { profile: UserProfile }) {
   const [showForm, setShowForm] = useState(false);
   const [editingCenter, setEditingCenter] = useState<SubCenter | null>(null);
 
+  // Manage Universities Modal State
+  const [selectedCenterForUni, setSelectedCenterForUni] = useState<SubCenter | null>(null);
+  const [originalMappings, setOriginalMappings] = useState<SubCenterUniversityMapping[]>([]);
+  const [allUniversities, setAllUniversities] = useState<University[]>([]);
+  const [loadingModal, setLoadingModal] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  // Checkbox Selection & Search State
+  const [selectedUniIds, setSelectedUniIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [savingChanges, setSavingChanges] = useState(false);
+
   // Form state
   const [form, setForm] = useState({
     center_code: '',
@@ -28,7 +51,9 @@ export function SubCentersView({ profile }: { profile: UserProfile }) {
     commission_percent: '',
   });
   const [submitting, setSubmitting] = useState(false);
+
   const { canCreate, canUpdate } = usePermissions(profile.role, 'sub_center');
+  const scUniMappingPerms = usePermissions(profile.role, 'sc_uni_mapping');
 
   const load = async () => {
     setLoading(true);
@@ -49,6 +74,138 @@ export function SubCentersView({ profile }: { profile: UserProfile }) {
   };
 
   useEffect(() => { load(); }, [statusFilter, page]); // eslint-disable-line
+
+  // Load modal mappings and active universities list from backend
+  const loadModalData = async (center: SubCenter) => {
+    setLoadingModal(true);
+    setModalError(null);
+    try {
+      // 1. Fetch current mappings for this subcenter
+      const mapRes = await partners.listMappings({ sub_center: center.id, page_size: '200' });
+      setOriginalMappings(mapRes.results);
+
+      // Initialize selected university IDs from the fetched mappings
+      const initialSelected = mapRes.results.map(m => m.university);
+      setSelectedUniIds(initialSelected);
+
+      // 2. Fetch all universities available to Super Admin
+      const uniRes = await aggregator.listUniversities({ page_size: '200' });
+      const activeUnis = uniRes.results.filter(u => u.is_active);
+      setAllUniversities(activeUnis);
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : 'Failed to load mapping data');
+    } finally {
+      setLoadingModal(false);
+    }
+  };
+
+  const handleOpenManageUnis = (center: SubCenter) => {
+    setSelectedCenterForUni(center);
+    setSelectedUniIds([]);
+    setOriginalMappings([]);
+    setAllUniversities([]);
+    setSearchQuery('');
+    setModalError(null);
+    loadModalData(center);
+  };
+
+  // Compare original state vs current checkbox state to compute mappings to Add/Remove
+  const originalUniIds = originalMappings.map(m => m.university);
+  const toAdd = selectedUniIds.filter(id => !originalUniIds.includes(id));
+  const toRemove = originalUniIds.filter(id => !selectedUniIds.includes(id));
+  const totalChanges = toAdd.length + toRemove.length;
+  const hasUnsavedChanges = totalChanges > 0;
+
+  const handleSaveChanges = async () => {
+    if (!selectedCenterForUni) return;
+    setSavingChanges(true);
+    setModalError(null);
+
+    // Track processing statistics
+    const additionsResults = await Promise.allSettled(
+      toAdd.map(async (uniId) => {
+        const uniName = allUniversities.find(u => u.id === uniId)?.name || 'Unknown University';
+        try {
+          await partners.createMapping({
+            sub_center: selectedCenterForUni.id,
+            university: uniId,
+          });
+          return { uniId, success: true };
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Unknown error';
+          throw new Error(`${uniName}: ${msg}`);
+        }
+      })
+    );
+
+    const removalsResults = await Promise.allSettled(
+      toRemove.map(async (uniId) => {
+        const uniName = allUniversities.find(u => u.id === uniId)?.name || 'Unknown University';
+        const mapping = originalMappings.find(m => m.university === uniId);
+        if (!mapping) {
+          throw new Error(`${uniName}: Original mapping mapping not found`);
+        }
+        try {
+          await partners.deleteMapping(mapping.id);
+          return { uniId, success: true };
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Unknown error';
+          throw new Error(`${uniName}: ${msg}`);
+        }
+      })
+    );
+
+    // Process failures
+    const failedAdditions: string[] = [];
+    const failedRemovals: string[] = [];
+    const errorMsgs: string[] = [];
+
+    additionsResults.forEach((res, index) => {
+      if (res.status === 'rejected') {
+        failedAdditions.push(toAdd[index]);
+        errorMsgs.push(res.reason.message);
+      }
+    });
+
+    removalsResults.forEach((res, index) => {
+      if (res.status === 'rejected') {
+        failedRemovals.push(toRemove[index]);
+        errorMsgs.push(res.reason.message);
+      }
+    });
+
+    // Refresh mappings from database backend to keep states synchronized
+    try {
+      await loadModalData(selectedCenterForUni);
+    } catch (err) {
+      errorMsgs.push(err instanceof Error ? err.message : 'Failed to reload mapping states');
+    }
+
+    if (errorMsgs.length > 0) {
+      setModalError(`Mapping updates completed with failures: ${errorMsgs.join('; ')}`);
+      // Restore failed selections to checkbox state to make them retryable
+      setSelectedUniIds(prev => {
+        const current = new Set(prev);
+        // Ensure failed additions remain checked
+        failedAdditions.forEach(id => current.add(id));
+        // Ensure failed removals remain checked (re-checked for delete retry)
+        failedRemovals.forEach(id => current.add(id));
+        return Array.from(current);
+      });
+    } else {
+      setModalError(null);
+    }
+    setSavingChanges(false);
+  };
+
+  const handleCloseModal = () => {
+    if (hasUnsavedChanges) {
+      if (!confirm('You have unsaved university assignment changes. Are you sure you want to close without saving?')) {
+        return;
+      }
+    }
+    setSelectedCenterForUni(null);
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +259,28 @@ export function SubCentersView({ profile }: { profile: UserProfile }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update status');
     }
+  };
+
+  // Filter based on search query matching university name or state
+  const filteredUnis = allUniversities.filter(uni =>
+    uni.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    uni.state.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleToggleUni = (uniId: string) => {
+    setSelectedUniIds(prev =>
+      prev.includes(uniId) ? prev.filter(id => id !== uniId) : [...prev, uniId]
+    );
+  };
+
+  const handleSelectAllVisible = () => {
+    const visibleIds = filteredUnis.map(u => u.id);
+    setSelectedUniIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+  };
+
+  const handleClearVisible = () => {
+    const visibleIds = new Set(filteredUnis.map(u => u.id));
+    setSelectedUniIds(prev => prev.filter(id => !visibleIds.has(id)));
   };
 
   if (showForm) {
@@ -294,6 +473,14 @@ export function SubCentersView({ profile }: { profile: UserProfile }) {
                         <StatusBadge status={sc.status} />
                       </td>
                       <td className="px-4 py-3 text-right">
+                        {scUniMappingPerms.canRead && (
+                          <button
+                            onClick={() => handleOpenManageUnis(sc)}
+                            className="text-primary text-sm hover:underline mr-4"
+                          >
+                            Universities
+                          </button>
+                        )}
                         {canUpdate && (
                           <>
                             <button onClick={() => handleEdit(sc)} className="text-primary text-sm hover:underline mr-4">Edit</button>
@@ -339,6 +526,155 @@ export function SubCentersView({ profile }: { profile: UserProfile }) {
           </div>
         )
       }
+
+      {/* Manage Universities Modal */}
+      {selectedCenterForUni && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-lg rounded-xl shadow-lg border border-border overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-muted/20">
+              <div>
+                <h3 className="font-semibold text-lg">Manage Universities</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Assigned universities for <span className="font-bold text-foreground">{selectedCenterForUni.name} ({selectedCenterForUni.center_code})</span>
+                </p>
+              </div>
+              <button
+                onClick={handleCloseModal}
+                disabled={savingChanges}
+                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+
+            {modalError && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 text-sm text-destructive mx-6 mt-4 max-h-24 overflow-y-auto">
+                {modalError}
+              </div>
+            )}
+
+            <div className="p-6 space-y-6">
+              {/* Search and Selection Headers */}
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Search universities..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    disabled={savingChanges || loadingModal}
+                    className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm min-w-0"
+                  />
+                </div>
+
+                <div className="flex justify-between items-center px-1 text-xs">
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSelectAllVisible}
+                      disabled={savingChanges || loadingModal || filteredUnis.length === 0}
+                      className="text-primary hover:underline font-medium disabled:opacity-50"
+                    >
+                      Select All Visible ({filteredUnis.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClearVisible}
+                      disabled={savingChanges || loadingModal || filteredUnis.length === 0}
+                      className="text-muted-foreground hover:text-foreground font-medium disabled:opacity-50"
+                    >
+                      Clear Visible
+                    </button>
+                  </div>
+                  <span className="text-muted-foreground font-bold">{selectedUniIds.length} selected</span>
+                </div>
+              </div>
+
+              {/* Checkbox List of All Active Universities */}
+              <div>
+                {loadingModal ? (
+                  <div className="py-12 flex justify-center">
+                    <svg className="animate-spin h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                ) : allUniversities.length === 0 ? (
+                  <div className="text-sm text-muted-foreground italic bg-muted/10 border border-dashed border-border rounded-lg p-6 text-center">
+                    No active universities found in the catalog.
+                  </div>
+                ) : (
+                  <div className="border border-border rounded-lg max-h-60 overflow-y-auto p-2 bg-muted/5 divide-y divide-border/50">
+                    {filteredUnis.length === 0 ? (
+                      <div className="text-xs text-muted-foreground text-center py-6">
+                        No universities match the search criteria.
+                      </div>
+                    ) : (
+                      filteredUnis.map(uni => {
+                        const isChecked = selectedUniIds.includes(uni.id);
+                        return (
+                          <label
+                            key={uni.id}
+                            className="flex items-center gap-3 py-2 px-1 hover:bg-muted/10 cursor-pointer text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => handleToggleUni(uni.id)}
+                              disabled={savingChanges}
+                              className="rounded border-input text-primary focus:ring-primary w-4 h-4"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-foreground truncate">{uni.name}</div>
+                              <div className="text-xs text-muted-foreground">{uni.state}</div>
+                            </div>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Changes Summary and Save Actions */}
+              <div className="border-t border-border pt-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div className="text-xs text-muted-foreground text-center sm:text-left">
+                  {hasUnsavedChanges ? (
+                    <span className="font-semibold text-foreground">
+                      {toAdd.length > 0 && `${toAdd.length} to assign`}
+                      {toAdd.length > 0 && toRemove.length > 0 && ' • '}
+                      {toRemove.length > 0 && `${toRemove.length} to unassign`}
+                    </span>
+                  ) : (
+                    <span>No unsaved changes</span>
+                  )}
+                </div>
+
+                <div className="flex gap-2 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    disabled={savingChanges}
+                    className="px-4 py-2 text-sm font-medium rounded-md border border-border hover:bg-muted text-foreground w-full sm:w-auto"
+                  >
+                    Cancel
+                  </button>
+                  {scUniMappingPerms.canUpdate && (
+                    <button
+                      type="button"
+                      onClick={handleSaveChanges}
+                      disabled={savingChanges || loadingModal || !hasUnsavedChanges}
+                      className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 w-full sm:w-auto"
+                    >
+                      {savingChanges ? 'Saving...' : `Save Changes (${totalChanges})`}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

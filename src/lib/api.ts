@@ -193,6 +193,16 @@ export interface SubCenter {
   commission_percent?: string | number;
 }
 
+export interface SubCenterUniversityMapping {
+  id: string;
+  sub_center: string;
+  sub_center_code?: string;
+  university: string;
+  university_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SystemUser {
   id: string;
   user: number;
@@ -490,6 +500,12 @@ export const partners = {
     apiFetch<Paginated<SystemUser>>(`/users${qs(params)}`),
   deleteUser: (id: string) =>
     apiFetch<void>(`/users/${id}`, { method: 'DELETE' }),
+  listMappings: (params?: Record<string, string>) =>
+    apiFetch<Paginated<SubCenterUniversityMapping>>(`/sub-center-university-mappings${qs(params)}`),
+  createMapping: (data: { sub_center: string; university: string }) =>
+    apiFetch<SubCenterUniversityMapping>('/sub-center-university-mappings', { method: 'POST', body: JSON.stringify(data) }),
+  deleteMapping: (id: string) =>
+    apiFetch<void>(`/sub-center-university-mappings/${id}`, { method: 'DELETE' }),
 };
 
 export const admissions = {
