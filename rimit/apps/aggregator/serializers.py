@@ -8,6 +8,26 @@ class FeeStructureSerializer(serializers.ModelSerializer):
         model = FeeStructure
         fields = '__all__'
         read_only_fields = ('id', 'created_at', 'updated_at')
+        validators = []
+
+    def validate(self, attrs):
+        course = attrs.get('course', self.instance.course if self.instance else None)
+        fee_type = attrs.get('fee_type', self.instance.fee_type if self.instance else None)
+        is_active = attrs.get('is_active', self.instance.is_active if self.instance else True)
+
+        if course and fee_type and is_active:
+            qs = FeeStructure.objects.filter(
+                course=course,
+                fee_type=fee_type,
+                is_active=is_active
+            )
+            if self.instance:
+                qs = qs.exclude(id=self.instance.id)
+            if qs.exists():
+                raise serializers.ValidationError({
+                    "fee_type": f"An active fee structure of type '{fee_type}' already exists for this course."
+                })
+        return attrs
 
 
 class CourseSerializer(serializers.ModelSerializer):

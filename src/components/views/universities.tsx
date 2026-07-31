@@ -6,6 +6,8 @@ import { PageHeader, LoadingState, ErrorState, EmptyState, ConfirmDialog } from 
 import { usePermissions } from '@/lib/permissions';
 
 import { toast } from 'sonner';
+import { FaEdit } from 'react-icons/fa';
+import { MdDelete } from 'react-icons/md';
 
 export function UniversitiesView({ profile }: { profile: UserProfile }) {
   const [universities, setUniversities] = useState<University[]>([]);
@@ -373,12 +375,20 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
   });
   const [submittingFee, setSubmittingFee] = useState(false);
 
+  // Edit Fee form state
+  const [editingFee, setEditingFee] = useState<any | null>(null);
+  const [editFeeForm, setEditFeeForm] = useState({
+    fee_type: 'tuition',
+    amount: '',
+  });
+  const [submittingEditFee, setSubmittingEditFee] = useState(false);
+
   const [uniToDelete, setUniToDelete] = useState<boolean>(false);
   const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
   const [feeToDelete, setFeeToDelete] = useState<string | null>(null);
 
   const { canCreate, canUpdate, canDelete } = usePermissions(profile.role, 'course');
-  const { canCreate: canCreateFee, canDelete: canDeleteFee } = usePermissions(profile.role, 'fee_structure');
+  const { canCreate: canCreateFee, canUpdate: canUpdateFee, canDelete: canDeleteFee } = usePermissions(profile.role, 'fee_structure');
 
   const loadDetail = async () => {
     setLoading(true);
@@ -519,6 +529,29 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
       setError(err instanceof Error ? err.message : 'Failed to create fee structure');
     } finally {
       setSubmittingFee(false);
+    }
+  };
+
+  const handleUpdateFee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingFee) return;
+    setSubmittingEditFee(true);
+    setError(null);
+    try {
+      const payload: any = {};
+      if (editFeeForm.fee_type !== editingFee.fee_type) {
+        payload.fee_type = editFeeForm.fee_type;
+      }
+      if (editFeeForm.amount !== editingFee.amount) {
+        payload.amount = editFeeForm.amount;
+      }
+      await aggregator.updateFee(editingFee.id, payload);
+      setEditingFee(null);
+      loadDetail();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update fee');
+    } finally {
+      setSubmittingEditFee(false);
     }
   };
 
@@ -747,6 +780,62 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
         </div>
       )}
 
+      {/* Edit Fee Overlay */}
+      {editingFee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card border border-border w-full max-w-sm rounded-lg shadow-lg p-6 space-y-4">
+            <h3 className="text-base font-bold text-foreground">Edit Fee</h3>
+            <form onSubmit={handleUpdateFee} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Fee Type *</label>
+                <select
+                  value={editFeeForm.fee_type}
+                  onChange={e => setEditFeeForm(prev => ({ ...prev, fee_type: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:outline-none"
+                >
+                  <option value="admission">Admission Fee</option>
+                  <option value="tuition">Tuition Fee</option>
+                  <option value="course_fee">Course Fee</option>
+                  <option value="registration_fee">Registration Fee</option>
+                  <option value="exam">Examination Fee</option>
+                  <option value="library">Library Fee</option>
+                  <option value="lab">Lab Fee</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Amount (₹) *</label>
+                <input
+                  type="number"
+                  required
+                  placeholder="Amount"
+                  value={editFeeForm.amount}
+                  onChange={e => setEditFeeForm(prev => ({ ...prev, amount: e.target.value }))}
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                />
+              </div>
+              <div className="flex gap-2 pt-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditingFee(null)}
+                  className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEditFee}
+                  className="bg-primary text-primary-foreground rounded-md px-4 py-1.5 text-xs font-medium hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {submittingEditFee ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-3">
         <h2 className="text-lg font-semibold">Courses ({detail.courses?.length ?? 0})</h2>
         {canCreate && (
@@ -778,16 +867,33 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                   {c.fees && c.fees.length > 0 ? (
                     <div className="space-y-1">
                       {c.fees.map(f => (
-                        <div key={f.id} className="text-xs flex items-center justify-end gap-2">
+                        <div key={f.id} className="text-xs flex items-center justify-end gap-2 flex-wrap mb-1">
                           <span className="text-muted-foreground">{f.fee_type}:</span>{' '}
-                          <span className="font-semibold text-foreground">₹{parseFloat(f.amount).toLocaleString('en-IN')}</span>
+                          <span className="font-semibold text-foreground mr-1">₹{parseFloat(f.amount).toLocaleString('en-IN')}</span>
+                          {canUpdateFee && (
+                            <button
+                              onClick={() => {
+                                setEditingFee(f);
+                                setEditFeeForm({
+                                  fee_type: f.fee_type,
+                                  amount: f.amount.toString(),
+                                });
+                              }}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-md text-primary hover:bg-primary/10 transition-colors"
+                              aria-label="Edit fee"
+                              title="Edit fee"
+                            >
+                              <FaEdit className="w-4 h-4" />
+                            </button>
+                          )}
                           {canDeleteFee && (
                             <button
                               onClick={() => setFeeToDelete(f.id)}
-                              className="text-destructive hover:underline font-bold"
-                              title="Delete Fee Item"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                              aria-label="Delete fee"
+                              title="Delete fee"
                             >
-                              ✕
+                              <MdDelete className="w-5 h-5" />
                             </button>
                           )}
                         </div>
