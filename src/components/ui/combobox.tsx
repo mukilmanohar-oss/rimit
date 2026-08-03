@@ -26,6 +26,7 @@ interface ComboboxProps {
   searchPlaceholder?: string
   emptyText?: string
   onBlur?: () => void
+  disabled?: boolean
 }
 
 export function Combobox({
@@ -36,11 +37,13 @@ export function Combobox({
   searchPlaceholder = "Search...",
   emptyText = "No option found.",
   onBlur,
+  disabled = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
   return (
-    <Popover open={open} onOpenChange={(isOpen) => {
+    <Popover open={open && !disabled} onOpenChange={(isOpen) => {
+      if (disabled) return;
       setOpen(isOpen);
       if (!isOpen && onBlur) onBlur();
     }}>
@@ -50,6 +53,7 @@ export function Combobox({
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between font-normal bg-background px-3 py-2 h-auto min-h-10 text-left"
+          disabled={disabled}
         >
           {value
             ? options.find((option) => option.value === value)?.label
@@ -66,7 +70,7 @@ export function Combobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label}
+                  value={`${option.label.toLowerCase()}__${option.value}`}
                   onSelect={() => {
                     onChange(option.value === value ? "" : option.value)
                     setOpen(false)

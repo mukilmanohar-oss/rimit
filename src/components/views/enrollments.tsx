@@ -726,24 +726,26 @@ function EnrollmentDetail({
 // ─── Enrollment Create Form ──────────────────────────────────────────────────
 function EnrollmentCreateForm({ onBack, onCancel }: { onBack: () => void; onCancel: () => void }) {
   const [students, setStudents] = useState<Array<{ id: string; full_name: string; primary_phone: string }>>([]);
+  const [universities, setUniversities] = useState<any[]>([]);
   const [courses, setCourses] = useState<Array<{ id: string; name: string; university_name?: string }>>([]);
   const [sessions, setSessions] = useState<Array<{ id: string; session_name: string; is_fresh_allowed: boolean }>>([]);
-  const [form, setForm] = useState({ student: '', course: '', session: '', admission_type: '' });
+  const [form, setForm] = useState({ student: '', university: '', course: '', session: '', admission_type: '' });
   const [validation, setValidation] = useState<{ valid: boolean; reason?: string; suggested?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingCourses, setLoadingCourses] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [s, c, sess] = await Promise.all([
+        const [s, u, sess] = await Promise.all([
           admissions.listStudents({ page_size: '200' }),
-          aggregator.listCourses({ page_size: '200' }),
+          aggregator.listUniversities({ page_size: '200' }),
           rules.listIntakeSessions({ is_active: 'True', page_size: '200' }),
         ]);
-        setStudents(s.results);
-        setCourses(c.results);
-        setSessions(sess.results);
+        setStudents(s.results || []);
+        setUniversities(u.results || []);
+        setSessions(sess.results || []);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load form data');
       }
@@ -808,13 +810,45 @@ function EnrollmentCreateForm({ onBack, onCancel }: { onBack: () => void; onCanc
         </div>
 
         <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">University *</label>
+          <select
+            value={form.university}
+            onChange={(e) => {
+              const uniId = e.target.value;
+              setForm(p => ({ ...p, university: uniId, course: '' }));
+              setValidation(null);
+              if (uniId) {
+                setLoadingCourses(true);
+                aggregator.listCourses({ university: uniId, page_size: '200' })
+                  .then(res => setCourses(res.results || []))
+                  .catch(() => setCourses([]))
+                  .finally(() => setLoadingCourses(false));
+              } else {
+                setCourses([]);
+              }
+            }}
+            className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+            required
+          >
+            <option value="">Select University...</option>
+            {universities.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+        </div>
+
+        <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">Course *</label>
           <Combobox
-            options={courses.map(c => ({ value: c.id, label: `${c.name} — ${c.university_name || 'No University'}` }))}
+            options={courses.map(c => ({ value: c.id, label: `${c.name} (${c.stream || ''})` }))}
             value={form.course}
             onChange={(val) => { setForm(p => ({ ...p, course: val })); setValidation(null); }}
             onBlur={preflight}
-            placeholder="Search course…"
+            placeholder={
+              !form.university ? "Select a university first" :
+              loadingCourses ? "Loading courses..." :
+              courses.length === 0 ? "No courses available" :
+              "Search course…"
+            }
+            disabled={!form.university || loadingCourses}
           />
         </div>
 
