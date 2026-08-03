@@ -350,6 +350,8 @@ export interface Enrollment {
   course: string;
   course_name?: string;
   university_name?: string;
+  course_duration_months?: number;
+  course_total_fee?: string | number | null;
   session: string;
   session_name?: string;
   status: string;

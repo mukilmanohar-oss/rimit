@@ -474,6 +474,19 @@ function EnrollmentDetail({
                 <dd className="font-medium text-foreground capitalize">{(detail as any).admission_type || '—'}</dd>
               </div>
               <div>
+                <dt className="text-xs text-muted-foreground">Course Duration</dt>
+                <dd className="font-medium text-foreground">
+                  {detail.course_duration_months ? `${detail.course_duration_months} Months` : '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Course Fee</dt>
+                <dd className="font-medium text-foreground">
+                  {detail.course_total_fee !== undefined && detail.course_total_fee !== null ?
+                    `₹${Number(detail.course_total_fee).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                </dd>
+              </div>
+              <div>
                 <dt className="text-xs text-muted-foreground">Current Status</dt>
                 <dd><StatusBadge status={detail.status} /></dd>
               </div>

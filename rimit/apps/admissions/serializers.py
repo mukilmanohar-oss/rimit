@@ -214,6 +214,8 @@ class EnrollmentSerializer(serializers.ModelSerializer):
     university_name = serializers.CharField(source='course.university.name', read_only=True)
     session_name = serializers.CharField(source='session.session_name', read_only=True)
     sub_center_code = serializers.CharField(source='sub_center.center_code', read_only=True)
+    course_duration_months = serializers.IntegerField(source='course.duration_months', read_only=True)
+    course_total_fee = serializers.SerializerMethodField()
     next_valid_statuses = serializers.SerializerMethodField()
 
     class Meta:
@@ -223,6 +225,11 @@ class EnrollmentSerializer(serializers.ModelSerializer):
 
     def get_next_valid_statuses(self, obj):
         return Enrollment.TRANSITIONS.get(obj.status, [])
+
+    def get_course_total_fee(self, obj):
+        if not obj.course_id:
+            return None
+        return sum(f.amount for f in obj.course.fees.filter(is_active=True))
 
     def validate(self, attrs):
         """On create: run Session Enforcement Matrix validation."""
