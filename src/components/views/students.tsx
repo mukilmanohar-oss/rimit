@@ -270,16 +270,21 @@ function StudentRegistrationForm({ onBack, onCancel }: { onBack: () => void; onC
     admission_type: 'Fresh', admission_semester: '1',
     address_line1: '', address_city: '', address_state: '', address_district: '', address_pincode: '',
     same_as_permanent: true,
+    university_id: '',
     course_id: '', sub_course: ''
   });
+  const [universities, setUniversities] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aadharWarning, setAadharWarning] = useState<string | null>(null);
   const [consentGiven, setConsentGiven] = useState(false);
 
   useEffect(() => {
-    aggregator.listCourses().then(res => setCourses(res.results)).catch(console.error);
+    aggregator.listUniversities({ page_size: '200' })
+      .then(res => setUniversities(res.results || []))
+      .catch(console.error);
   }, []);
 
   const handleAadharBlur = async () => {
@@ -303,7 +308,7 @@ function StudentRegistrationForm({ onBack, onCancel }: { onBack: () => void; onC
     const phoneValid = /^[0-9]{10}$/.test(form.primary_phone);
     const emailValid = form.email ? /^[^@]+@[^@]+\.[^@]+$/.test(form.email) : true;
     const aadharValid = form.aadhar_number.replace(/\s/g, '').length === 12;
-    return form.full_name && form.dob && phoneValid && emailValid && aadharValid && form.course_id && consentGiven;
+    return form.full_name && form.dob && phoneValid && emailValid && aadharValid && form.university_id && form.course_id && consentGiven;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -411,10 +416,50 @@ function StudentRegistrationForm({ onBack, onCancel }: { onBack: () => void; onC
           <h3 className="text-sm font-semibold mb-3 text-foreground border-b border-border pb-2">Academic Profile</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">University *</label>
+              <select
+                value={form.university_id}
+                onChange={e => {
+                  const uniId = e.target.value;
+                  setForm(prev => ({ ...prev, university_id: uniId, course_id: '' }));
+                  if (uniId) {
+                    setLoadingCourses(true);
+                    aggregator.listCourses({ university: uniId, page_size: '200' })
+                      .then(res => setCourses(res.results || []))
+                      .catch(() => setCourses([]))
+                      .finally(() => setLoadingCourses(false));
+                  } else {
+                    setCourses([]);
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+                required
+              >
+                <option value="">Select University...</option>
+                {universities.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Target Course *</label>
-              <select value={form.course_id} onChange={e => set('course_id', e.target.value)} className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm" required>
-                <option value="">Select Course...</option>
-                {courses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.stream})</option>)}
+              <select
+                value={form.course_id}
+                onChange={e => set('course_id', e.target.value)}
+                className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+                required
+                disabled={!form.university_id || loadingCourses}
+              >
+                {!form.university_id ? (
+                  <option value="">Select a university first</option>
+                ) : loadingCourses ? (
+                  <option value="">Loading courses...</option>
+                ) : courses.length === 0 ? (
+                  <option value="">No courses available</option>
+                ) : (
+                  <>
+                    <option value="">Select Course...</option>
+                    {courses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.stream})</option>)}
+                  </>
+                )}
               </select>
             </div>
             <Field label="Sub-Course Specialization" value={form.sub_course} onChange={v => set('sub_course', v)} />
@@ -524,7 +569,12 @@ function StudentEditForm({ student, onBack, onCancel }: { student: Student; onBa
     address_city: student.address_block?.perm_city || student.address_data?.city || "", 
     address_state: student.address_block?.perm_state || student.address_data?.state || "", 
     address_pincode: student.address_block?.perm_pincode || student.address_data?.pincode || "",
+    university_id: "",
+    course_id: student.course || "",
   });
+  const [universities, setUniversities] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -533,8 +583,28 @@ function StudentEditForm({ student, onBack, onCancel }: { student: Student; onBa
   const isFormValid = () => {
     const phoneValid = /^[0-9]{10}$/.test(form.primary_phone);
     const emailValid = form.email ? /^[^@]+@[^@]+\.[^@]+$/.test(form.email) : true;
-    return form.full_name && form.dob && phoneValid && emailValid;
+    return form.full_name && form.dob && phoneValid && emailValid && form.university_id && form.course_id;
   };
+
+  useEffect(() => {
+    aggregator.listUniversities({ page_size: '200' })
+      .then(res => setUniversities(res.results || []))
+      .catch(console.error);
+
+    if (student.course) {
+      setLoadingCourses(true);
+      aggregator.getCourse(student.course)
+        .then(course => {
+          setForm(prev => ({ ...prev, university_id: course.university }));
+          return aggregator.listCourses({ university: course.university, page_size: '200' });
+        })
+        .then(res => {
+          setCourses(res.results || []);
+        })
+        .catch(console.error)
+        .finally(() => setLoadingCourses(false));
+    }
+  }, [student.course]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -571,6 +641,7 @@ function StudentEditForm({ student, onBack, onCancel }: { student: Student; onBa
         admission_type: student.admission_type,
         admission_semester: student.admission_semester,
         address_block: address_block,
+        course: form.course_id,
       };
       await admissions.updateStudent(student.id, payload);
       toast.success(`? ${student.full_name} updated successfully.`);
@@ -612,6 +683,60 @@ function StudentEditForm({ student, onBack, onCancel }: { student: Student; onBa
               </select>
             </div>
             {/* Aadhar is typically immutable or requires special process, so omitted from edit for safety */}
+          </div>
+        </div>
+
+        {/* Academic Profile */}
+        <div>
+          <h3 className="text-sm font-semibold mb-3 text-foreground border-b border-border pb-2">Academic Profile</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">University *</label>
+              <select
+                value={form.university_id}
+                onChange={e => {
+                  const uniId = e.target.value;
+                  setForm(prev => ({ ...prev, university_id: uniId, course_id: '' }));
+                  if (uniId) {
+                    setLoadingCourses(true);
+                    aggregator.listCourses({ university: uniId, page_size: '200' })
+                      .then(res => setCourses(res.results || []))
+                      .catch(() => setCourses([]))
+                      .finally(() => setLoadingCourses(false));
+                  } else {
+                    setCourses([]);
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+                required
+              >
+                <option value="">Select University...</option>
+                {universities.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Target Course *</label>
+              <select
+                value={form.course_id}
+                onChange={e => set('course_id', e.target.value)}
+                className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+                required
+                disabled={!form.university_id || loadingCourses}
+              >
+                {!form.university_id ? (
+                  <option value="">Select a university first</option>
+                ) : loadingCourses ? (
+                  <option value="">Loading courses...</option>
+                ) : courses.length === 0 ? (
+                  <option value="">No courses available</option>
+                ) : (
+                  <>
+                    <option value="">Select Course...</option>
+                    {courses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.stream})</option>)}
+                  </>
+                )}
+              </select>
+            </div>
           </div>
         </div>
 
