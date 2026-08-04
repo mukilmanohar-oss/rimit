@@ -1,4 +1,3 @@
-"""URL configuration for RIMIT B2B Aggregator."""
 from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import (
@@ -6,6 +5,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+from apps.finance.views import mock_checkout_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -32,6 +32,9 @@ urlpatterns = [
     path('api/v1/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/v1/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/v1/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
+    # Mock gateway checkout view (debug/mock only)
+    path('mock-checkout/<str:token>/', mock_checkout_view, name='mock-checkout'),
 ]
 
 from django.conf import settings

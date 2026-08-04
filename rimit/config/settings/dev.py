@@ -4,6 +4,9 @@ from .base import *  # noqa
 DEBUG = True
 ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1']
 
+# Enable mock gateway in development environments
+MOCK_GATEWAY_ENABLED = True
+
 # Use eager Celery (sync) for tests
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True

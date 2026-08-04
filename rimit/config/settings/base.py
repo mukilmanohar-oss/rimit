@@ -18,6 +18,10 @@ SECRET_KEY = os.environ.get(
 DEBUG = False
 ALLOWED_HOSTS: list[str] = []
 
+# Payment gateway configurations
+PAYMENT_GATEWAY_CHECKOUT_URL = None
+MOCK_GATEWAY_ENABLED = False
+
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',

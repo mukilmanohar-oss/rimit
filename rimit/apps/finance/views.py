@@ -245,6 +245,9 @@ class BatchCheckoutView(APIView):
 
             gateway_token = uuid.uuid4().hex
 
+        from apps.common.payment_helpers import get_gateway_checkout_url
+        checkout_url = get_gateway_checkout_url(request, gateway_token, str(invoice.id))
+
         return Response({
             'message': 'Batch checkout initiated',
             'invoice_id': str(invoice.id),
@@ -252,7 +255,7 @@ class BatchCheckoutView(APIView):
             'sub_center_commission_deducted': str(total_sc_deducted),
             'net_payable_collected': str(total_net),
             'line_items': line_items_out,
-            'gateway_redirect_url': f"https://mock-pg.com/checkout/{gateway_token}?invoice={invoice.id}"
+            'gateway_redirect_url': checkout_url
         })
 
 
@@ -331,3 +334,133 @@ class PaymentWebhookView(APIView):
             return Response({'error': 'Duplicate transaction reference'}, status=400)
 
         return Response({'status': 'Webhook processed'}, status=200)
+
+
+def mock_checkout_view(request, token):
+    from django.http import HttpResponse, HttpResponseForbidden
+    from django.conf import settings
+    from apps.finance.models import Invoice
+
+    if not getattr(settings, 'MOCK_GATEWAY_ENABLED', False):
+        return HttpResponseForbidden("Mock gateway is disabled.")
+
+    invoice_id = request.GET.get('invoice')
+    if not invoice_id:
+        return HttpResponse("Invoice ID query param missing.", status=400)
+
+    try:
+        invoice = Invoice.all_objects.get(id=invoice_id)
+    except (Invoice.DoesNotExist, ValueError):
+        return HttpResponse("Invoice not found.", status=404)
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Mock Payment Gateway Checkout</title>
+        <style>
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                background-color: #f3f4f6;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                margin: 0;
+            }}
+            .card {{
+                background-color: #ffffff;
+                padding: 2.5rem;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+                max-width: 450px;
+                width: 100%;
+                text-align: center;
+            }}
+            h2 {{ color: #111827; margin-bottom: 1.5rem; }}
+            .detail {{ font-size: 1.1rem; color: #4b5563; margin-bottom: 0.75rem; }}
+            .amount {{ font-size: 1.8rem; font-weight: bold; color: #059669; margin: 1.5rem 0; }}
+            .btn-group {{ display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; }}
+            button {{
+                padding: 0.75rem 1.5rem;
+                border-radius: 6px;
+                font-size: 1rem;
+                font-weight: 600;
+                cursor: pointer;
+                border: none;
+                transition: background-color 0.2s;
+                width: 50%;
+            }}
+            .btn-success {{ background-color: #059669; color: white; }}
+            .btn-success:hover {{ background-color: #047857; }}
+            .btn-fail {{ background-color: #dc2626; color: white; }}
+            .btn-fail:hover {{ background-color: #b91c1c; }}
+            #status-message {{ margin-top: 1.5rem; font-weight: 500; font-size: 1.05rem; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h2>Mock Gateway Payment</h2>
+            <div class="detail"><strong>Invoice ID:</strong> {invoice.id}</div>
+            <div class="detail"><strong>Sub-Center:</strong> {invoice.sub_center.name}</div>
+            <div class="amount">₹{invoice.net_payable_collected}</div>
+
+            <div class="btn-group">
+                <button class="btn-success" onclick="submitPayment('success')">Simulate Success</button>
+                <button class="btn-fail" onclick="submitPayment('failed')">Simulate Failure</button>
+            </div>
+
+            <div id="status-message"></div>
+        </div>
+
+        <script>
+            function submitPayment(status) {{
+                const msgDiv = document.getElementById('status-message');
+                msgDiv.style.color = '#374151';
+                msgDiv.innerText = "Processing mock callback...";
+
+                const gatewayRef = "pay_" + Math.random().toString(36).substring(2, 15);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const transformPort = urlParams.get('XTransformPort');
+
+                let webhookUrl = '/api/v1/webhooks/payment/';
+                if (transformPort) {{
+                    webhookUrl += '?XTransformPort=' + transformPort;
+                }}
+
+                fetch(webhookUrl, {{
+                    method: 'POST',
+                    headers: {{
+                        'Content-Type': 'application/json'
+                    }},
+                    body: JSON.stringify({{
+                        invoice_id: "{invoice.id}",
+                        status: status,
+                        gateway_reference: gatewayRef
+                    }})
+                }})
+                .then(response => {{
+                    if (response.ok) {{
+                        return response.json();
+                    }}
+                    return response.json().then(err => {{ throw new Error(err.error || 'Webhook failed'); }});
+                }})
+                .then(data => {{
+                    msgDiv.style.color = status === 'success' ? '#059669' : '#dc2626';
+                    msgDiv.innerText = "Payment completed: " + status.toUpperCase();
+                    setTimeout(() => {{
+                        alert("Mock payment completed successfully! You can close this tab now.");
+                    }}, 500);
+                }})
+                .catch(err => {{
+                    msgDiv.style.color = '#dc2626';
+                    msgDiv.innerText = "Error: " + err.message;
+                }});
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    return HttpResponse(html_content)

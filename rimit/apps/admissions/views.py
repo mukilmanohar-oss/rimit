@@ -362,10 +362,13 @@ class EnrollmentViewSet(AuditLogMixin, TenantAwareViewMixin, viewsets.ModelViewS
                 sub_center_commission=breakdown.sub_center_commission,
                 rimit_commission=breakdown.rimit_commission,
                 net_payable=breakdown.net_payable,
-            )
+             )
             gateway_token = uuid.uuid4().hex
+
+        from apps.common.payment_helpers import get_gateway_checkout_url
+        checkout_url = get_gateway_checkout_url(request, gateway_token, str(invoice.id))
 
         return Response({
             "invoice_id": str(invoice.id),
-            "gateway_redirect_url": f"https://mock-pg.com/checkout/{gateway_token}?invoice={invoice.id}"
+            "gateway_redirect_url": checkout_url
         })
