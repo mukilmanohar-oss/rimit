@@ -153,3 +153,9 @@ class IsFinanceOrAbove(BasePermission):
     """Finance, Academic Head, or Super Admin."""
     def has_permission(self, request, view):
         return _user_role(request) in [SA, AH, F]
+
+
+class IsMockPaymentAllowed(BasePermission):
+    """Allow super_admin, academic_head, counselor, and subcenter for dev mock payment."""
+    def has_permission(self, request, view):
+        return _user_role(request) in [SA, AH, C, SC]

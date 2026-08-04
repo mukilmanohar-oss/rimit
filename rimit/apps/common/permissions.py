@@ -16,6 +16,7 @@ from apps.common.rbac import (
     IsTenantMember,
     IsCounselorOrAbove,
     IsFinanceOrAbove,
+    IsMockPaymentAllowed,
 )
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     'IsTenantMember',
     'IsCounselorOrAbove',
     'IsFinanceOrAbove',
+    'IsMockPaymentAllowed',
 ]

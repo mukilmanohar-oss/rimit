@@ -26,8 +26,8 @@ class PaymentLedgerViewSet(TenantAwareViewMixin, viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         return PaymentLedger.objects.select_related('enrollment', 'enrollment__student')
 
-    from apps.common.permissions import IsCounselorOrAbove
-    @action(detail=False, methods=['POST'], permission_classes=[IsCounselorOrAbove])
+    from apps.common.permissions import IsMockPaymentAllowed
+    @action(detail=False, methods=['POST'], permission_classes=[IsMockPaymentAllowed])
     def mock_payment(self, request):
         """Mock a successful payment capture (for dev UI testing)."""
         from apps.admissions.models import Enrollment
