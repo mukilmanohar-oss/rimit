@@ -238,7 +238,7 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
             <button
               onClick={() => {
                 setEditingUni(null);
-                setUniForm({ name: '', state: '', accreditation: '', description: '' });
+                setUniForm({ name: '', state: '', accreditation: '', description: '', default_university_share_percent: '' });
                 setShowAddUni(true);
               }}
               className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90"
@@ -358,6 +358,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
     duration_months: 36,
     eligibility_text: '',
     university_share_percent: '',
+    course_fee: '',
+    registration_fee: '',
   });
   const [submittingCourse, setSubmittingCourse] = useState(false);
 
@@ -369,6 +371,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
     duration_months: 36,
     eligibility_text: '',
     university_share_percent: '',
+    course_fee: '',
+    registration_fee: '',
   });
   const [submittingEditCourse, setSubmittingEditCourse] = useState(false);
 
@@ -420,6 +424,10 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
 
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!courseForm.course_fee) {
+      setError("Course Fee is required.");
+      return;
+    }
     setSubmittingCourse(true);
     setError(null);
 
@@ -434,7 +442,7 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
     }
 
     try {
-      await aggregator.createCourse({
+      const newCourse = await aggregator.createCourse({
         university: university.id,
         name: courseForm.name,
         stream: courseForm.stream,
@@ -443,7 +451,36 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
         university_share_percent: courseForm.university_share_percent ? Number(courseForm.university_share_percent) : null,
         is_active: true,
       });
-      setCourseForm({ name: '', stream: 'Undergraduate', duration_months: 36, eligibility_text: '', university_share_percent: '' });
+
+      // Create Course Fee
+      await aggregator.createFee({
+        course: newCourse.id,
+        fee_type: 'course_fee',
+        amount: courseForm.course_fee,
+        currency: 'INR',
+        is_active: true,
+      });
+
+      // Create Registration Fee if specified
+      if (courseForm.registration_fee) {
+        await aggregator.createFee({
+          course: newCourse.id,
+          fee_type: 'registration_fee',
+          amount: courseForm.registration_fee,
+          currency: 'INR',
+          is_active: true,
+        });
+      }
+
+      setCourseForm({
+        name: '',
+        stream: 'Undergraduate',
+        duration_months: 36,
+        eligibility_text: '',
+        university_share_percent: '',
+        course_fee: '',
+        registration_fee: '',
+      });
       setShowAddCourse(false);
       loadDetail();
     } catch (err) {
@@ -456,6 +493,10 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
   const handleUpdateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCourse) return;
+    if (!editCourseForm.course_fee) {
+      setError("Course Fee is required.");
+      return;
+    }
     setSubmittingEditCourse(true);
     setError(null);
     try {
@@ -483,6 +524,43 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
       }
 
       await aggregator.updateCourse(editingCourse.id, payload);
+
+      // Handle Course Fee update/creation
+      const existingCourseFee = editingCourse.fees?.find(f => f.fee_type === 'course_fee' && f.is_active);
+      if (existingCourseFee) {
+        if (existingCourseFee.amount.toString() !== editCourseForm.course_fee) {
+          await aggregator.updateFee(existingCourseFee.id, { amount: editCourseForm.course_fee });
+        }
+      } else {
+        await aggregator.createFee({
+          course: editingCourse.id,
+          fee_type: 'course_fee',
+          amount: editCourseForm.course_fee,
+          currency: 'INR',
+          is_active: true,
+        });
+      }
+
+      // Handle Registration Fee update/creation/deletion
+      const existingRegFee = editingCourse.fees?.find(f => f.fee_type === 'registration_fee' && f.is_active);
+      if (editCourseForm.registration_fee) {
+        if (existingRegFee) {
+          if (existingRegFee.amount.toString() !== editCourseForm.registration_fee) {
+            await aggregator.updateFee(existingRegFee.id, { amount: editCourseForm.registration_fee });
+          }
+        } else {
+          await aggregator.createFee({
+            course: editingCourse.id,
+            fee_type: 'registration_fee',
+            amount: editCourseForm.registration_fee,
+            currency: 'INR',
+            is_active: true,
+          });
+        }
+      } else if (existingRegFee) {
+        await aggregator.deleteFee(existingRegFee.id);
+      }
+
       setEditingCourse(null);
       loadDetail();
     } catch (err) {
@@ -652,6 +730,34 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                   className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
                 />
               </div>
+              <div className="border-t border-border pt-3 mt-3">
+                <h4 className="text-xs font-bold text-foreground mb-2">Fee Configuration</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Course Fee (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={courseForm.course_fee}
+                      onChange={e => setCourseForm(prev => ({ ...prev, course_fee: e.target.value }))}
+                      placeholder="E.g., 50000"
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Registration Fee (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={courseForm.registration_fee}
+                      onChange={e => setCourseForm(prev => ({ ...prev, registration_fee: e.target.value }))}
+                      placeholder="E.g., 2000"
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
               <div className="flex gap-2 pt-2 justify-end">
                 <button
                   type="button"
@@ -743,6 +849,34 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                   placeholder="Leave blank to inherit university default"
                   className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
                 />
+              </div>
+              <div className="border-t border-border pt-3 mt-3">
+                <h4 className="text-xs font-bold text-foreground mb-2">Fee Configuration</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Course Fee (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={editCourseForm.course_fee}
+                      onChange={e => setEditCourseForm(prev => ({ ...prev, course_fee: e.target.value }))}
+                      placeholder="E.g., 50000"
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Registration Fee (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editCourseForm.registration_fee}
+                      onChange={e => setEditCourseForm(prev => ({ ...prev, registration_fee: e.target.value }))}
+                      placeholder="E.g., 2000"
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                    />
+                  </div>
+                </div>
               </div>
               {editCourseForm.stream === 'Other' && (
                 <p className="text-xs text-destructive font-medium mt-1">
@@ -956,6 +1090,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                       {canUpdate && (
                         <button
                           onClick={() => {
+                            const courseFeeVal = c.fees?.find(f => f.fee_type === 'course_fee' && f.is_active)?.amount?.toString() || '';
+                            const regFeeVal = c.fees?.find(f => f.fee_type === 'registration_fee' && f.is_active)?.amount?.toString() || '';
                             setEditingCourse(c);
                             setEditCourseForm({
                               name: c.name,
@@ -963,6 +1099,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                               duration_months: c.duration_months,
                               eligibility_text: c.eligibility_text || '',
                               university_share_percent: c.university_share_percent !== null && c.university_share_percent !== undefined ? c.university_share_percent.toString() : '',
+                              course_fee: courseFeeVal,
+                              registration_fee: regFeeVal,
                             });
                           }}
                           className="text-[11px] text-primary hover:underline font-semibold ml-2"
