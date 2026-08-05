@@ -83,6 +83,35 @@ class CourseSerializer(serializers.ModelSerializer):
                 })
 
         # ----------------------------------------------------
+        # Rule 2.5: University Share Percentage Override (using attrs)
+        # ----------------------------------------------------
+        if 'university_share_percent' in attrs:
+            share_pct = attrs.get('university_share_percent')
+            if share_pct is not None:
+                if share_pct <= 0:
+                    raise serializers.ValidationError({
+                        'university_share_percent': 'University share percentage override must be greater than 0.'
+                    })
+                if share_pct > 100:
+                    raise serializers.ValidationError({
+                        'university_share_percent': 'University share percentage override cannot be greater than 100.'
+                    })
+
+        # Ensure we can resolve a valid share percentage (Task: prevent saving course if both override and default are missing/0)
+        course_share = attrs.get('university_share_percent')
+        if self.instance and 'university_share_percent' not in attrs:
+            course_share = self.instance.university_share_percent
+
+        if course_share is None:
+            uni_share = None
+            if university:
+                uni_share = university.default_university_share_percent
+            if uni_share is None or uni_share == 0:
+                raise serializers.ValidationError({
+                    'university_share_percent': "Unable to determine the University Share %. Please configure either the University's Default University Share % or the Course University Share % Override before continuing."
+                })
+
+        # ----------------------------------------------------
         # Rule 3: Stream Reclassification (using attrs & database state)
         # ----------------------------------------------------
         if not is_create:
@@ -160,6 +189,9 @@ class UniversitySerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'state', 'accreditation', 'description', 'website',
                   'logo_uri', 'is_active', 'course_count', 'default_university_share_percent', 'created_at', 'updated_at']
         read_only_fields = ('id', 'created_at', 'updated_at')
+        extra_kwargs = {
+            'default_university_share_percent': {'required': True, 'allow_null': False}
+        }
 
     def get_course_count(self, obj):
         return obj.courses.filter(is_active=True).count()
@@ -176,6 +208,18 @@ class UniversitySerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     'default_university_share_percent': 'Default university share percentage cannot be empty.'
                 })
+
+        if 'default_university_share_percent' in attrs:
+            share_pct = attrs.get('default_university_share_percent')
+            if share_pct is not None:
+                if share_pct <= 0:
+                    raise serializers.ValidationError({
+                        'default_university_share_percent': 'Default university share percentage must be greater than 0.'
+                    })
+                if share_pct > 100:
+                    raise serializers.ValidationError({
+                        'default_university_share_percent': 'Default university share percentage cannot be greater than 100.'
+                    })
 
         name = attrs.get('name')
         if name is not None:

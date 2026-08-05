@@ -331,6 +331,11 @@ class EnrollmentViewSet(AuditLogMixin, TenantAwareViewMixin, viewsets.ModelViewS
             return Response({"detail": "Repayment amount must be positive."}, status=status.HTTP_400_BAD_REQUEST)
 
         uni_pct = course.university_share_percent if course.university_share_percent is not None else course.university.default_university_share_percent
+        if uni_pct is None or uni_pct == 0:
+            return Response(
+                {"detail": "Unable to determine the University Share %. Please configure either the University's Default University Share % or the Course University Share % Override before continuing."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         from apps.finance.models import SubCenterCommission
         sc_comm = SubCenterCommission.objects.filter(sub_center=enrollment.sub_center, course=course).first()

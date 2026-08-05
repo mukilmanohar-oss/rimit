@@ -475,6 +475,14 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
         return;
       }
     }
+    const isOverrideBlank = courseForm.university_share_percent === '';
+    const defaultShare = detail?.default_university_share_percent;
+    const isDefaultInvalid = defaultShare === null || defaultShare === undefined || Number(defaultShare) === 0;
+
+    if (isOverrideBlank && isDefaultInvalid) {
+      setCourseError("Unable to determine the University Share %. Please configure either the University's Default University Share % or the Course University Share % Override before continuing.");
+      return;
+    }
     setSubmittingCourse(true);
     setCourseError(null);
 
@@ -566,6 +574,14 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
         setCourseError("University share percentage override cannot be greater than 100.");
         return;
       }
+    }
+    const isOverrideBlank = editCourseForm.university_share_percent === '';
+    const defaultShare = detail?.default_university_share_percent;
+    const isDefaultInvalid = defaultShare === null || defaultShare === undefined || Number(defaultShare) === 0;
+
+    if (isOverrideBlank && isDefaultInvalid) {
+      setCourseError("Unable to determine the University Share %. Please configure either the University's Default University Share % or the Course University Share % Override before continuing.");
+      return;
     }
     setSubmittingEditCourse(true);
     setCourseError(null);

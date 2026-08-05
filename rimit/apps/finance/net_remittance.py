@@ -63,7 +63,8 @@ def calculate_net_remittance(
     university_share_percent,
     sub_center_commission_percent,
 ) -> NetRemittanceBreakdown:
-    """Compute the Net Remittance breakdown with strict validation."""
+    if university_share_percent is None or _to_decimal(university_share_percent) == 0:
+        raise NetRemittanceError("Unable to determine the University Share %. Please configure either the University's Default University Share % or the Course University Share % Override before continuing.")
 
     total_fee_d = _q(_to_decimal(total_fee))
     uni_pct = _to_decimal(university_share_percent)
