@@ -637,8 +637,8 @@ function EnrollmentDetail({
                 <div className="space-y-2">
                   {fees.length === 0 ? (
                     courseObj?.total_fee ? (
-                      <div className="divide-y divide-border">
-                        <div className="flex justify-between py-2 text-sm">
+                      <div className="space-y-2">
+                        <div className="flex justify-between py-1 text-sm">
                           <span className="text-muted-foreground">Course Fee</span>
                           <span className="font-semibold text-foreground">₹{parseFloat(String(courseObj.total_fee)).toLocaleString('en-IN')}</span>
                         </div>
@@ -649,16 +649,16 @@ function EnrollmentDetail({
                       </div>
                     )
                   ) : (
-                    <div className="divide-y divide-border">
+                    <div className="space-y-2">
                       {fees.map(fee => (
-                        <div key={fee.id} className="flex justify-between py-2 text-sm">
+                        <div key={fee.id} className="flex justify-between py-1 text-sm">
                           <span className="text-muted-foreground capitalize">{fee.fee_type.replace(/_/g, ' ')}</span>
                           <span className="font-semibold text-foreground">₹{parseFloat(fee.amount).toLocaleString('en-IN')}</span>
                         </div>
                       ))}
                     </div>
                   )}
-                  <div className="border-t-2 border-dashed border-border pt-3 mt-3 space-y-2">
+                  <div className="border-t border-border pt-3 mt-3 space-y-2">
                     <div className="flex justify-between text-sm font-semibold text-foreground">
                       <span>Total Fee</span>
                       <span>₹{totalFee.toLocaleString('en-IN')}</span>
