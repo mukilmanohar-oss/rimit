@@ -47,6 +47,7 @@ class UniversityFactory(DjangoModelFactory):
     name = factory.Sequence(lambda n: f'University {n}')
     state = 'Kerala'
     accreditation = 'NAAC A+'
+    default_university_share_percent = 50.00
     is_active = True
 
 

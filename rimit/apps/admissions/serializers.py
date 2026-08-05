@@ -191,13 +191,18 @@ class StudentListSerializer(serializers.ModelSerializer):
         uni_pct = course.university_share_percent
         if uni_pct is None:
             uni_pct = course.university.default_university_share_percent
+        if uni_pct is None or uni_pct == 0:
+            return None
 
-        from apps.finance.net_remittance import calculate_net_remittance
-        return calculate_net_remittance(
-            total_fee=total_fee,
-            university_share_percent=uni_pct,
-            sub_center_commission_percent=obj.sub_center.commission_percent,
-        )
+        from apps.finance.net_remittance import calculate_net_remittance, NetRemittanceError
+        try:
+            return calculate_net_remittance(
+                total_fee=total_fee,
+                university_share_percent=uni_pct,
+                sub_center_commission_percent=obj.sub_center.commission_percent,
+            )
+        except NetRemittanceError:
+            return None
 
     def get_your_commission(self, obj):
         b = self._calc_breakdown(obj)
@@ -226,6 +231,14 @@ class EnrollmentSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """On create: run Session Enforcement Matrix validation."""
+        course = attrs.get('course')
+        if course:
+            uni_pct = course.university_share_percent if course.university_share_percent is not None else course.university.default_university_share_percent
+            if uni_pct is None or uni_pct == 0:
+                raise serializers.ValidationError({
+                    'course': "Unable to determine the University Share %. Please configure either the University's Default University Share % or the Course University Share % Override before continuing."
+                })
+
         request = self.context.get('request')
         if request and self.instance is None:
             from apps.rules.engine import validate_enrollment
