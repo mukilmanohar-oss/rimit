@@ -33,27 +33,57 @@ class PaymentLedgerViewSet(TenantAwareViewMixin, viewsets.ReadOnlyModelViewSet):
         from apps.admissions.models import Enrollment
         from decimal import Decimal
         import uuid
+        from apps.common.utils_storage import handle_file_upload
         
         enrollment_id = request.data.get("enrollment_id")
         amount = request.data.get("amount")
         
         if not enrollment_id or not amount:
             return Response({"error": "enrollment_id and amount required"}, status=400)
+
+        from decimal import InvalidOperation
+        try:
+            amount_val = Decimal(str(amount))
+        except (ValueError, InvalidOperation):
+            return Response({"amount": ["Amount must be a valid number."]}, status=400)
+
+        if not amount_val.is_finite():
+            return Response({"amount": ["Amount must be a finite number."]}, status=400)
+
+        amount_val = amount_val.quantize(Decimal('0.01'))
+
+        if amount_val <= 0:
+            return Response({"amount": ["Amount must be greater than 0."]}, status=400)
             
         try:
             enrollment = Enrollment.objects.get(id=enrollment_id)
         except Enrollment.DoesNotExist:
             return Response({"error": "Enrollment not found"}, status=404)
             
+        remarks = request.data.get('remarks', '')
+
+        # File upload handling (mandatory)
+        file_obj = request.FILES.get('screenshot') or request.FILES.get('file')
+        if not file_obj:
+            return Response({"screenshot": ["Payment screenshot is required."]}, status=400)
+
+        screenshot_uri = handle_file_upload(
+            file_obj,
+            directory=f"payments/{enrollment.id}/",
+            filename_prefix="screenshot_"
+        )
+
         # Create a captured payment ledger
         ledger = PaymentLedger.objects.create(
             enrollment=enrollment,
             sub_center=enrollment.sub_center,
-            amount_paid=Decimal(amount),
+            amount_paid=amount_val,
             gateway="razorpay_mock",
             transaction_ref=f"pay_mock_{uuid.uuid4().hex[:10]}",
             status="captured",
-            gateway_response={"mock": True}
+            gateway_response={"mock": True},
+            remarks=remarks,
+            screenshot_uri=screenshot_uri
         )
         
         return Response({"message": "Mock payment created", "ledger_id": str(ledger.id)})
