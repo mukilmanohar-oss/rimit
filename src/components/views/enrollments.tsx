@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { admissions, aggregator, rules, finance, DEFAULT_PAGE_SIZE, type Enrollment, type UserProfile } from '@/lib/api';
+import { admissions, aggregator, rules, finance, DEFAULT_PAGE_SIZE, type Enrollment, type UserProfile, type Course, type FeeStructure, type PaymentLedger } from '@/lib/api';
 import { PageHeader, LoadingState, ErrorState, EmptyState, StatusBadge } from '../rimit-shell';
 import { usePermissions } from '@/lib/permissions';
 import { exportToCSV } from '@/lib/utils';
@@ -338,6 +338,31 @@ function EnrollmentDetail({
   const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
   const [paymentScreenshotError, setPaymentScreenshotError] = useState<string | null>(null);
 
+  const [fees, setFees] = useState<FeeStructure[]>([]);
+  const [payments, setPayments] = useState<PaymentLedger[]>([]);
+  const [courseObj, setCourseObj] = useState<Course | null>(null);
+
+  const loadFinancials = async () => {
+    try {
+      const cRes = await aggregator.getCourse(detail.course);
+      setCourseObj(cRes);
+    } catch {
+      // ignore
+    }
+    try {
+      const feesRes = await aggregator.listFees(detail.course);
+      setFees((feesRes.results || []).filter(f => f.is_active));
+    } catch {
+      // ignore
+    }
+    try {
+      const paymentsRes = await finance.listPayments({ enrollment: detail.id, ordering: '-created_at' });
+      setPayments(paymentsRes.results || []);
+    } catch {
+      // ignore
+    }
+  };
+
   // Statuses restricted to super_admin only
   const SUPER_ADMIN_ONLY_STATUSES = ['Fee Paid', 'Enrolled', 'Enrollment Generated'];
   const isSuperAdmin = profile.role === 'super_admin';
@@ -402,6 +427,7 @@ function EnrollmentDetail({
     if (mutationSuccess) {
       try {
         loadTimeline();
+        loadFinancials();
         const updated = await admissions.getEnrollment(detail.id);
         setDetail(updated);
       } catch (err) {
@@ -410,7 +436,10 @@ function EnrollmentDetail({
     }
   };
 
-  useEffect(() => { loadTimeline(); }, []); // eslint-disable-line
+  useEffect(() => {
+    loadTimeline();
+    loadFinancials();
+  }, []); // eslint-disable-line
 
   const handleMockPayment = async () => {
     if (!detail) return;
@@ -451,6 +480,7 @@ function EnrollmentDetail({
     if (mutationSuccess) {
       try {
         loadTimeline();
+        loadFinancials();
         const updated = await admissions.getEnrollment(detail.id);
         setDetail(updated);
       } catch (err) {
@@ -589,6 +619,118 @@ function EnrollmentDetail({
                 <p className="text-sm text-foreground whitespace-pre-wrap">{detail.notes}</p>
               </div>
             )}
+          </div>
+
+          {/* Fee Details Card */}
+          {(() => {
+            const totalFee = fees.length > 0
+              ? fees.reduce((sum, f) => sum + parseFloat(f.amount || '0'), 0)
+              : (courseObj?.total_fee ? parseFloat(String(courseObj.total_fee)) : 0);
+            const totalPaid = payments
+              .filter(p => p.status === 'captured')
+              .reduce((sum, p) => sum + parseFloat(p.amount_paid || '0'), 0);
+            const balanceFee = Math.max(0, totalFee - totalPaid);
+
+            return (
+              <div className="bg-card border border-border rounded-lg p-5">
+                <h3 className="text-sm font-semibold mb-3 text-foreground border-b border-border pb-2">Fee Details</h3>
+                <div className="space-y-2">
+                  {fees.length === 0 ? (
+                    courseObj?.total_fee ? (
+                      <div className="divide-y divide-border">
+                        <div className="flex justify-between py-2 text-sm">
+                          <span className="text-muted-foreground">Course Fee</span>
+                          <span className="font-semibold text-foreground">₹{parseFloat(String(courseObj.total_fee)).toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground py-2">
+                        No active fee items configured for this course.
+                      </div>
+                    )
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {fees.map(fee => (
+                        <div key={fee.id} className="flex justify-between py-2 text-sm">
+                          <span className="text-muted-foreground capitalize">{fee.fee_type.replace(/_/g, ' ')}</span>
+                          <span className="font-semibold text-foreground">₹{parseFloat(fee.amount).toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="border-t-2 border-dashed border-border pt-3 mt-3 space-y-2">
+                    <div className="flex justify-between text-sm font-semibold text-foreground">
+                      <span>Total Fee</span>
+                      <span>₹{totalFee.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-semibold text-emerald-600">
+                      <span>Amount Paid</span>
+                      <span>₹{totalPaid.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-bold text-primary border-t border-border pt-2">
+                      <span>Balance Amount</span>
+                      <span>₹{balanceFee.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Payment History Card */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold mb-3 text-foreground border-b border-border pb-2">Payment History</h3>
+            <div className="overflow-x-auto">
+              {payments.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-2">
+                  No payments recorded yet.
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/30 border-b border-border">
+                    <tr>
+                      <th className="text-left px-4 py-2 font-medium text-muted-foreground">Transaction Ref</th>
+                      <th className="text-left px-4 py-2 font-medium text-muted-foreground">Amount</th>
+                      <th className="text-left px-4 py-2 font-medium text-muted-foreground">Status</th>
+                      <th className="text-left px-4 py-2 font-medium text-muted-foreground">Date & Time</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {payments.map(p => (
+                      <tr key={p.id} className="hover:bg-muted/20">
+                        <td className="px-4 py-2 font-medium text-foreground">
+                          <span className="block font-mono text-xs">{p.transaction_ref}</span>
+                          {p.remarks && (
+                            <span className="block text-[10px] text-muted-foreground font-normal mt-0.5">
+                              Remarks: {p.remarks}
+                            </span>
+                          )}
+                          {p.screenshot_uri && (
+                            <a
+                              href={p.screenshot_uri}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] text-primary hover:underline block mt-0.5 font-normal"
+                            >
+                              View Screenshot
+                            </a>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 font-semibold text-foreground">
+                          ₹{parseFloat(p.amount_paid).toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-4 py-2">
+                          <StatusBadge status={p.status} />
+                        </td>
+                        <td className="px-4 py-2 text-muted-foreground text-xs">
+                          {new Date(p.created_at).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
 
           {error && <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 text-sm text-destructive">{error}</div>}
