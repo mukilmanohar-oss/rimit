@@ -159,6 +159,18 @@ class UniversitySerializer(serializers.ModelSerializer):
         return obj.courses.filter(is_active=True).count()
 
     def validate(self, attrs):
+        is_create = self.instance is None
+        if is_create:
+            if 'default_university_share_percent' not in attrs or attrs.get('default_university_share_percent') is None:
+                raise serializers.ValidationError({
+                    'default_university_share_percent': 'Default university share percentage is required.'
+                })
+        else:
+            if 'default_university_share_percent' in attrs and attrs.get('default_university_share_percent') is None:
+                raise serializers.ValidationError({
+                    'default_university_share_percent': 'Default university share percentage cannot be empty.'
+                })
+
         name = attrs.get('name')
         if name is not None:
             name = name.strip()

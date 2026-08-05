@@ -27,6 +27,7 @@ class TestUniversityAPI(BaseAPITestCase):
             'name': 'Mangalayatan University',
             'state': 'Uttar Pradesh',
             'accreditation': 'NAAC A',
+            'default_university_share_percent': '50.00',
             'is_active': True,
         })
         assert resp.status_code == status.HTTP_201_CREATED, resp.content
@@ -37,6 +38,7 @@ class TestUniversityAPI(BaseAPITestCase):
         resp = client.post('/api/v1/universities', {
             'name': 'Forbidden University',
             'state': 'Kerala',
+            'default_university_share_percent': '50.00',
         })
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
@@ -102,6 +104,7 @@ class TestUniversityAPI(BaseAPITestCase):
             'name': 'Amity University',
             'state': 'Kerala',
             'accreditation': 'UGC',
+            'default_university_share_percent': '50.00',
             'is_active': True,
         })
         assert resp.status_code == status.HTTP_201_CREATED
@@ -113,6 +116,7 @@ class TestUniversityAPI(BaseAPITestCase):
             'name': 'Amity University',
             'state': 'Kerala',
             'accreditation': 'UGC',
+            'default_university_share_percent': '50.00',
         })
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert 'A university with this name already exists in the selected state.' in str(resp.data)
@@ -124,6 +128,7 @@ class TestUniversityAPI(BaseAPITestCase):
             'name': 'amity university',
             'state': 'Kerala',
             'accreditation': 'UGC',
+            'default_university_share_percent': '50.00',
         })
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert 'A university with this name already exists in the selected state.' in str(resp.data)
@@ -135,6 +140,7 @@ class TestUniversityAPI(BaseAPITestCase):
             'name': 'Amity University',
             'state': 'Karnataka',
             'accreditation': 'UGC',
+            'default_university_share_percent': '50.00',
         })
         assert resp.status_code == status.HTTP_201_CREATED
 
@@ -213,6 +219,7 @@ class TestUniversityAPI(BaseAPITestCase):
         resp = client.post('/api/v1/universities', {
             'name': ' ABC University ',
             'state': ' Kerala ',
+            'default_university_share_percent': '50.00',
         })
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -220,6 +227,7 @@ class TestUniversityAPI(BaseAPITestCase):
         resp2 = client.post('/api/v1/universities', {
             'name': 'Universität-1!',
             'state': 'München',
+            'default_university_share_percent': '50.00',
         })
         assert resp2.status_code == status.HTTP_201_CREATED
 
@@ -227,8 +235,36 @@ class TestUniversityAPI(BaseAPITestCase):
         resp3 = client.post('/api/v1/universities', {
             'name': 'universität-1!',
             'state': 'München',
+            'default_university_share_percent': '50.00',
         })
         assert resp3.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_default_university_share_percent_mandatory(self):
+        client = self.super_admin_client()
+        # Missing field on create
+        resp = client.post('/api/v1/universities', {
+            'name': 'Test Mandatory Uni',
+            'state': 'Kerala',
+        }, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'default_university_share_percent' in resp.data
+
+        # Explicitly null on create
+        resp = client.post('/api/v1/universities', {
+            'name': 'Test Mandatory Uni 2',
+            'state': 'Kerala',
+            'default_university_share_percent': None,
+        }, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'default_university_share_percent' in resp.data
+
+        # Explicitly null on update
+        uni = UniversityFactory(name='Update Uni', state='Kerala')
+        resp = client.patch(f'/api/v1/universities/{uni.id}', {
+            'default_university_share_percent': None,
+        }, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'default_university_share_percent' in resp.data
 
 
 @pytest.mark.django_db

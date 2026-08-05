@@ -63,6 +63,10 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
 
   const handleCreateUni = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (uniForm.default_university_share_percent === '') {
+      setError("Default university share percentage is required.");
+      return;
+    }
     setSubmittingUni(true);
     setError(null);
     try {
@@ -188,7 +192,7 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Default University Share % (of Total Fee)</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Default University Share % (of Total Fee) *</label>
               <input
                 type="number"
                 step="0.01"
@@ -197,6 +201,7 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
                 value={uniForm.default_university_share_percent}
                 onChange={e => setUniForm(prev => ({ ...prev, default_university_share_percent: e.target.value }))}
                 placeholder="E.g., 50.00"
+                required
                 className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
               />
               <p className="text-[11px] text-muted-foreground mt-1">University’s default share of Total Fee (0–100%). Courses may override.</p>
@@ -211,7 +216,7 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
               </button>
               <button
                 type="submit"
-                disabled={submittingUni || !uniForm.name || !uniForm.state}
+                disabled={submittingUni || !uniForm.name || !uniForm.state || uniForm.default_university_share_percent === ''}
                 className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
                 {submittingUni ? 'Saving...' : editingUni ? 'Update' : 'Create'}
