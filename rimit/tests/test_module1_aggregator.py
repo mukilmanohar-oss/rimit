@@ -266,6 +266,33 @@ class TestUniversityAPI(BaseAPITestCase):
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert 'default_university_share_percent' in resp.data
 
+        # Value = 0 on create
+        resp = client.post('/api/v1/universities', {
+            'name': 'Test Mandatory Uni 3',
+            'state': 'Kerala',
+            'default_university_share_percent': 0,
+        }, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'default_university_share_percent' in resp.data
+
+        # Value < 0 on create
+        resp = client.post('/api/v1/universities', {
+            'name': 'Test Mandatory Uni 4',
+            'state': 'Kerala',
+            'default_university_share_percent': -5.50,
+        }, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'default_university_share_percent' in resp.data
+
+        # Value > 100 on create
+        resp = client.post('/api/v1/universities', {
+            'name': 'Test Mandatory Uni 5',
+            'state': 'Kerala',
+            'default_university_share_percent': 105.00,
+        }, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'default_university_share_percent' in resp.data
+
 
 @pytest.mark.django_db
 class TestCourseSearch(BaseAPITestCase):
@@ -373,6 +400,76 @@ class TestCourseSearch(BaseAPITestCase):
         assert resp_cert.data['count'] == 1
         assert resp_cert.data['results'][0]['name'] == 'Cert 1'
 
+    def test_course_university_share_percent_validation(self):
+        uni = UniversityFactory()
+        client = self.super_admin_client()
+
+        # 1. Blank/None should be valid (stores NULL/blank)
+        resp = client.post('/api/v1/courses', {
+            'university': str(uni.id),
+            'name': 'Valid Course 1',
+            'stream': 'Undergraduate',
+            'duration_months': 36,
+            'university_share_percent': None,
+        }, format='json')
+        assert resp.status_code == status.HTTP_201_CREATED, resp.content
+        assert resp.data['university_share_percent'] is None
+
+        # 2. 0 should be invalid
+        resp = client.post('/api/v1/courses', {
+            'university': str(uni.id),
+            'name': 'Invalid Course 0',
+            'stream': 'Undergraduate',
+            'duration_months': 36,
+            'university_share_percent': 0,
+        }, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'university_share_percent' in resp.data
+
+        # 3. 0.00 should be invalid
+        resp = client.post('/api/v1/courses', {
+            'university': str(uni.id),
+            'name': 'Invalid Course 0.00',
+            'stream': 'Undergraduate',
+            'duration_months': 36,
+            'university_share_percent': 0.00,
+        }, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'university_share_percent' in resp.data
+
+        # 4. Negative values should be invalid
+        resp = client.post('/api/v1/courses', {
+            'university': str(uni.id),
+            'name': 'Invalid Course Neg',
+            'stream': 'Undergraduate',
+            'duration_months': 36,
+            'university_share_percent': -5.00,
+        }, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'university_share_percent' in resp.data
+
+        # 5. Values > 100 should be invalid
+        resp = client.post('/api/v1/courses', {
+            'university': str(uni.id),
+            'name': 'Invalid Course Over',
+            'stream': 'Undergraduate',
+            'duration_months': 36,
+            'university_share_percent': 105.00,
+        }, format='json')
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'university_share_percent' in resp.data
+
+        # 6. Valid percentage value should be accepted
+        resp = client.post('/api/v1/courses', {
+            'university': str(uni.id),
+            'name': 'Valid Course 25',
+            'stream': 'Undergraduate',
+            'duration_months': 36,
+            'university_share_percent': 25.00,
+        }, format='json')
+        assert resp.status_code == status.HTTP_201_CREATED, resp.content
+        assert float(resp.data['university_share_percent']) == 25.00
+
 
 @pytest.mark.django_db
 class TestFeeStructureAPI(BaseAPITestCase):
@@ -477,7 +574,39 @@ class TestFeeStructureAPI(BaseAPITestCase):
         })
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert 'fee_type' in resp.data
+    def test_fee_structure_amount_must_be_positive(self):
+        course = CourseFactory()
+        client = self.super_admin_client()
 
+        # Create with 0 amount -> should be rejected
+        resp = client.post('/api/v1/fees', {
+            'course': str(course.id),
+            'fee_type': FeeStructure.FEE_TUITION,
+            'amount': '0.00',
+            'currency': 'INR',
+            'is_active': True,
+        })
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'amount' in resp.data
+
+        # Create with negative amount -> should be rejected
+        resp = client.post('/api/v1/fees', {
+            'course': str(course.id),
+            'fee_type': FeeStructure.FEE_TUITION,
+            'amount': '-1000.00',
+            'currency': 'INR',
+            'is_active': True,
+        })
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'amount' in resp.data
+
+        # Patch with negative amount -> should be rejected
+        fee = FeeStructureFactory(course=course, fee_type=FeeStructure.FEE_TUITION, amount=50000)
+        resp = client.patch(f'/api/v1/fees/{fee.id}', {
+            'amount': '-500.00'
+        })
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'amount' in resp.data
 
 @pytest.mark.django_db
 class TestUniversityDocVault(BaseAPITestCase):

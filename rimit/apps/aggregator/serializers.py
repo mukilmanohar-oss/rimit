@@ -27,6 +27,12 @@ class FeeStructureSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     "fee_type": f"An active fee structure of type '{fee_type}' already exists for this course."
                 })
+
+        amount = attrs.get('amount')
+        if amount is not None and amount <= 0:
+            raise serializers.ValidationError({
+                "amount": "Fee amount must be greater than 0."
+            })
         return attrs
 
 
