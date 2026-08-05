@@ -77,25 +77,6 @@ class CourseSerializer(serializers.ModelSerializer):
                 })
 
         # ----------------------------------------------------
-        # Rule 2: University Share Percentage (using attrs)
-        # ----------------------------------------------------
-        if is_create:
-            # Required and cannot be null on creation
-            share_pct = attrs.get('university_share_percent')
-            if share_pct is None:
-                raise serializers.ValidationError({
-                    "university_share_percent": "University share percentage override is required."
-                })
-        else:
-            # On update: reject explicitly if present and null
-            if 'university_share_percent' in attrs:
-                share_pct_val = attrs.get('university_share_percent')
-                if share_pct_val is None:
-                    raise serializers.ValidationError({
-                        'university_share_percent': 'university_share_percent cannot be null on update.'
-                    })
-
-        # ----------------------------------------------------
         # Rule 3: Stream Reclassification (using attrs & database state)
         # ----------------------------------------------------
         if not is_create:

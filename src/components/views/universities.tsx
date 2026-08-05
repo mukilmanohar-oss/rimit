@@ -428,12 +428,6 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
       return;
     }
 
-    if (!courseForm.university_share_percent) {
-      setError("University share percentage override is required.");
-      setSubmittingCourse(false);
-      return;
-    }
-
     try {
       await aggregator.createCourse({
         university: university.id,
@@ -441,7 +435,7 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
         stream: courseForm.stream,
         duration_months: Number(courseForm.duration_months),
         eligibility_text: courseForm.eligibility_text,
-        university_share_percent: courseForm.university_share_percent ? Number(courseForm.university_share_percent) : undefined,
+        university_share_percent: courseForm.university_share_percent ? Number(courseForm.university_share_percent) : null,
         is_active: true,
       });
       setCourseForm({ name: '', stream: 'Undergraduate', duration_months: 36, eligibility_text: '', university_share_percent: '' });
@@ -479,16 +473,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
         ? editingCourse.university_share_percent.toString()
         : '';
       
-      if (originalShare !== '' && editCourseForm.university_share_percent === '') {
-        setError("University share percentage cannot be cleared once set.");
-        setSubmittingEditCourse(false);
-        return;
-      }
-
       if (editCourseForm.university_share_percent !== originalShare) {
-        if (editCourseForm.university_share_percent !== '') {
-          payload.university_share_percent = Number(editCourseForm.university_share_percent);
-        }
+        payload.university_share_percent = editCourseForm.university_share_percent === '' ? null : Number(editCourseForm.university_share_percent);
       }
 
       await aggregator.updateCourse(editingCourse.id, payload);
@@ -649,7 +635,7 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">University Share % Override *</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">University Share % Override</label>
                 <input
                   type="number"
                   step="0.01"
@@ -657,8 +643,7 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                   max="100"
                   value={courseForm.university_share_percent}
                   onChange={e => setCourseForm(prev => ({ ...prev, university_share_percent: e.target.value }))}
-                  required
-                  placeholder="E.g., 75.00"
+                  placeholder="Leave blank to inherit university default"
                   className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
                 />
               </div>
