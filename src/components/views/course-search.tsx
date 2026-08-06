@@ -6,6 +6,13 @@ import { can } from '@/lib/permissions';
 import { PageHeader, LoadingState, ErrorState, EmptyState } from '../rimit-shell';
 import { toast } from 'sonner';
 
+const DEFAULT_ENROLL_FORM = {
+  student: '',
+  session: '',
+  admission_type: 'fresh',
+  admission_semester: '1',
+};
+
 export function CourseSearchView({ profile }: { profile: UserProfile }) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [universities, setUniversities] = useState<University[]>([]);
@@ -29,7 +36,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
   
   // Enroll Modal state
   const [enrollCourse, setEnrollCourse] = useState<Course | null>(null);
-  const [enrollForm, setEnrollForm] = useState({ student: '', session: '' });
+  const [enrollForm, setEnrollForm] = useState(DEFAULT_ENROLL_FORM);
   const [validating, setValidating] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
 
@@ -144,10 +151,12 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
         student: enrollForm.student,
         course: enrollCourse.id,
         session: enrollForm.session,
+        admission_type: enrollForm.admission_type,
+        admission_semester: enrollForm.admission_semester,
       });
       toast.success('Enrollment created successfully!');
       setEnrollCourse(null);
-      setEnrollForm({ student: '', session: '' });
+      setEnrollForm(DEFAULT_ENROLL_FORM);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Enrollment failed');
     } finally {
@@ -345,7 +354,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                           <button
                             onClick={() => {
                               setEnrollCourse(course);
-                              setEnrollForm({ student: '', session: '' });
+                              setEnrollForm(DEFAULT_ENROLL_FORM);
                             }}
                             className="bg-primary text-primary-foreground px-3.5 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition flex-1 sm:flex-none text-center min-w-[110px] sm:min-w-0"
                           >
@@ -441,7 +450,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
               <button
                 onClick={() => {
                   setEnrollCourse(null);
-                  setEnrollForm({ student: '', session: '' });
+                  setEnrollForm(DEFAULT_ENROLL_FORM);
                 }}
                 className="text-muted-foreground hover:text-foreground"
               >
@@ -480,6 +489,32 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Admission Type *</label>
+                <select
+                  value={enrollForm.admission_type}
+                  onChange={e => setEnrollForm(prev => ({ ...prev, admission_type: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Select Admission Type</option>
+                  <option value="fresh">Fresh</option>
+                  <option value="lateral">Lateral</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Admission Semester *</label>
+                <input
+                  type="text"
+                  value={enrollForm.admission_semester}
+                  onChange={e => setEnrollForm(prev => ({ ...prev, admission_semester: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="e.g. Semester 1"
+                />
+              </div>
+
               {/* Preflight Validation Matrix Feedback */}
               {validating ? (
                 <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground animate-pulse">
@@ -501,7 +536,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                   type="button"
                   onClick={() => {
                     setEnrollCourse(null);
-                    setEnrollForm({ student: '', session: '' });
+                    setEnrollForm(DEFAULT_ENROLL_FORM);
                   }}
                   className="px-4 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground"
                 >
@@ -509,7 +544,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                 </button>
                 <button
                   type="submit"
-                  disabled={enrolling || validating || !enrollForm.student || !enrollForm.session || !!(preflightResult && !preflightResult.valid)}
+                  disabled={enrolling || validating || !enrollForm.student || !enrollForm.session || !enrollForm.admission_type || !enrollForm.admission_semester || !!(preflightResult && !preflightResult.valid)}
                   className="px-4 py-2 text-sm font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition"
                 >
                   {enrolling ? 'Enrolling...' : 'Submit Application'}

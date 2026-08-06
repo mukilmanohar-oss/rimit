@@ -474,6 +474,10 @@ function EnrollmentDetail({
                 <dd className="font-medium text-foreground capitalize">{(detail as any).admission_type || '—'}</dd>
               </div>
               <div>
+                <dt className="text-xs text-muted-foreground">Admission Semester</dt>
+                <dd className="font-medium text-foreground">{(detail as any).admission_semester || '—'}</dd>
+              </div>
+              <div>
                 <dt className="text-xs text-muted-foreground">Current Status</dt>
                 <dd><StatusBadge status={detail.status} /></dd>
               </div>
@@ -728,7 +732,7 @@ function EnrollmentCreateForm({ onBack, onCancel }: { onBack: () => void; onCanc
   const [students, setStudents] = useState<Array<{ id: string; full_name: string; primary_phone: string }>>([]);
   const [courses, setCourses] = useState<Array<{ id: string; name: string; university_name?: string }>>([]);
   const [sessions, setSessions] = useState<Array<{ id: string; session_name: string; is_fresh_allowed: boolean }>>([]);
-  const [form, setForm] = useState({ student: '', course: '', session: '', admission_type: '' });
+  const [form, setForm] = useState({ student: '', course: '', session: '', admission_type: 'fresh', admission_semester: '1' });
   const [validation, setValidation] = useState<{ valid: boolean; reason?: string; suggested?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -834,13 +838,25 @@ function EnrollmentCreateForm({ onBack, onCancel }: { onBack: () => void; onCanc
           <select
             value={form.admission_type}
             onChange={(e) => setForm(p => ({ ...p, admission_type: e.target.value }))}
-            className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+            className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             required
           >
             <option value="">Select admission type…</option>
             <option value="fresh">Fresh</option>
             <option value="lateral">Lateral</option>
           </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Admission Semester *</label>
+          <input
+            type="text"
+            value={form.admission_semester}
+            onChange={(e) => setForm(p => ({ ...p, admission_semester: e.target.value }))}
+            className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="e.g. Semester 1"
+            required
+          />
         </div>
 
         {validation && (
@@ -886,6 +902,7 @@ function EnrollmentCreateForm({ onBack, onCancel }: { onBack: () => void; onCanc
 function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enrollment; onBack: () => void; onCancel: () => void }) {
   const [notes, setNotes] = useState(enrollment.notes || '');
   const [admissionType, setAdmissionType] = useState((enrollment as any).admission_type || '');
+  const [admissionSemester, setAdmissionSemester] = useState((enrollment as any).admission_semester || '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -894,7 +911,7 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
     setSubmitting(true);
     setError(null);
     try {
-      await admissions.updateEnrollment(enrollment.id, { notes, admission_type: admissionType });
+      await admissions.updateEnrollment(enrollment.id, { notes, admission_type: admissionType, admission_semester: admissionSemester });
       toast.success('✓ Enrollment updated successfully.');
       setTimeout(() => onBack(), 800);
     } catch (err) {
@@ -918,12 +935,24 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
           <select
             value={admissionType}
             onChange={(e) => setAdmissionType(e.target.value)}
-            className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+            className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">Select admission type…</option>
             <option value="fresh">Fresh</option>
             <option value="lateral">Lateral</option>
           </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Admission Semester *</label>
+          <input
+            type="text"
+            value={admissionSemester}
+            onChange={(e) => setAdmissionSemester(e.target.value)}
+            className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="e.g. Semester 1"
+            required
+          />
         </div>
 
         <div>
