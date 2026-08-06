@@ -124,4 +124,37 @@ class TestConfigurableEnrollmentLock(BaseAPITestCase):
             assert resp.status_code == status.HTTP_400_BAD_REQUEST
             assert "Invalid session matrix rule" in resp.content.decode('utf-8')
 
+    def test_non_percentage_scores_rejected_for_percentage_requirements(self):
+        from tests.factories import StudentFactory, CourseFactory, IntakeSessionFactory
+        from apps.admissions.models import StudentAcademicHistory
 
+        student = StudentFactory(sub_center=self.center_a)
+        StudentAcademicHistory.objects.create(
+            student=student,
+            qualification='High School',
+            score_type='cgpa',
+            score_value=8.5,
+            year_of_passing=2020
+        )
+
+        course = CourseFactory(
+            eligibility_criteria_json={
+                'min_qualification': 'High School',
+                'min_score_percentage': '60.0'
+            }
+        )
+        session = IntakeSessionFactory()
+
+        resp = self.client.post(
+            '/api/v1/enrollments',
+            {
+                'student': str(student.id),
+                'course': str(course.id),
+                'session': str(session.id),
+                'admission_type': 'fresh',
+                'status': 'Applied'
+            },
+            format='json'
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Student does not meet minimum eligibility criteria" in resp.content.decode('utf-8')

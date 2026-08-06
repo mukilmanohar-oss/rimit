@@ -929,22 +929,29 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
     })();
   }, []);
 
-  const preflight = async () => {
-    if (!course || !session) return;
-    try {
-      const r = await rules.validateEnrollment(enrollment.student, course, session);
-      setValidation({ valid: r.valid, reason: r.reason, suggested: r.suggested_session_id || undefined });
-    } catch (e) {
-      // ignore preflight check errors
-    }
-  };
-
   useEffect(() => {
+    let active = true;
+    const runPreflight = async () => {
+      if (!course || !session) return;
+      try {
+        const r = await rules.validateEnrollment(enrollment.student, course, session);
+        if (active) {
+          setValidation({ valid: r.valid, reason: r.reason, suggested: r.suggested_session_id || undefined });
+        }
+      } catch (e) {
+        // ignore preflight check errors
+      }
+    };
+
     if (course !== enrollment.course || session !== enrollment.session) {
-      preflight();
+      runPreflight();
     } else {
       setValidation(null);
     }
+
+    return () => {
+      active = false;
+    };
   }, [course, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -971,6 +978,8 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
         const parsed = JSON.parse(msg);
         if (parsed.session) {
           setError(parsed.session[0] || parsed.session);
+        } else if (parsed.course) {
+          setError(parsed.course[0] || parsed.course);
         } else if (parsed.detail) {
           setError(parsed.detail);
         } else {
@@ -999,7 +1008,6 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
             options={courses.map(c => ({ value: c.id, label: `${c.name} — ${c.university_name || 'No University'}` }))}
             value={course}
             onChange={(val) => { setCourse(val); setValidation(null); }}
-            onBlur={preflight}
             placeholder="Search course…"
           />
         </div>
@@ -1010,7 +1018,6 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
             options={sessions.map(s => ({ value: s.id, label: `${s.session_name} ${s.is_fresh_allowed ? '(fresh allowed)' : '(continuing only)'}` }))}
             value={session}
             onChange={(val) => { setSession(val); setValidation(null); }}
-            onBlur={preflight}
             placeholder="Search session…"
           />
         </div>

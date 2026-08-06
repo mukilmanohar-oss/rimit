@@ -280,8 +280,9 @@ class EnrollmentSerializer(serializers.ModelSerializer):
                         for h in histories:
                             if req_qual and h.qualification != req_qual:
                                 continue
-                            if req_score and h.score_type == 'percentage' and h.score_value < float(req_score):
-                                continue
+                            if req_score:
+                                if h.score_type != 'percentage' or h.score_value < float(req_score):
+                                    continue
                             passed_eligibility = True
                             break
                         if not passed_eligibility:
@@ -328,8 +329,9 @@ class EnrollmentSerializer(serializers.ModelSerializer):
                             # basic check: if req_qual matches or is not specified, check score
                             if req_qual and h.qualification != req_qual:
                                 continue
-                            if req_score and h.score_type == 'percentage' and h.score_value < float(req_score):
-                                continue
+                            if req_score:
+                                if h.score_type != 'percentage' or h.score_value < float(req_score):
+                                    continue
                             passed_eligibility = True
                             break
                         
