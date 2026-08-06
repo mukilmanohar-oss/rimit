@@ -104,3 +104,24 @@ class TestConfigurableEnrollmentLock(BaseAPITestCase):
         )
         assert resp_applied.status_code == status.HTTP_200_OK
 
+    @override_settings(RESTRICT_EDIT_ENROLLMENT_STATUS='Enrolled')
+    def test_enforce_matrix_rules_on_update(self):
+        from tests.factories import IntakeSessionFactory
+        from unittest.mock import patch
+        from apps.rules.engine import ValidationResult
+        
+        enrollment = EnrollmentFactory(sub_center=self.center_a, status='Applied')
+        new_session = IntakeSessionFactory()
+        
+        with patch('apps.rules.engine.validate_enrollment') as mock_val:
+            mock_val.return_value = ValidationResult(valid=False, reason="Invalid session matrix rule", suggested_session_id=None)
+            
+            resp = self.client.patch(
+                f'/api/v1/enrollments/{enrollment.id}',
+                {'session': str(new_session.id)},
+                format='json'
+            )
+            assert resp.status_code == status.HTTP_400_BAD_REQUEST
+            assert "Invalid session matrix rule" in resp.content.decode('utf-8')
+
+

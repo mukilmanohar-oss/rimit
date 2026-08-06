@@ -906,8 +906,46 @@ function EnrollmentCreateForm({ onBack, onCancel }: { onBack: () => void; onCanc
 function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enrollment; onBack: () => void; onCancel: () => void }) {
   const [notes, setNotes] = useState(enrollment.notes || '');
   const [admissionType, setAdmissionType] = useState((enrollment as any).admission_type || '');
+  const [course, setCourse] = useState(enrollment.course || '');
+  const [session, setSession] = useState(enrollment.session || '');
+  const [courses, setCourses] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [validation, setValidation] = useState<{ valid: boolean; reason: string; suggested?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [c, sess] = await Promise.all([
+          aggregator.listCourses({ page_size: '200' }),
+          rules.listIntakeSessions({ is_active: 'True', page_size: '200' }),
+        ]);
+        setCourses(c.results);
+        setSessions(sess.results);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load form data');
+      }
+    })();
+  }, []);
+
+  const preflight = async () => {
+    if (!course || !session) return;
+    try {
+      const r = await rules.validateEnrollment(enrollment.student, course, session);
+      setValidation({ valid: r.valid, reason: r.reason, suggested: r.suggested_session_id || undefined });
+    } catch (e) {
+      // ignore preflight check errors
+    }
+  };
+
+  useEffect(() => {
+    if (course !== enrollment.course || session !== enrollment.session) {
+      preflight();
+    } else {
+      setValidation(null);
+    }
+  }, [course, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -919,11 +957,28 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
     setSubmitting(true);
     setError(null);
     try {
-      await admissions.updateEnrollment(enrollment.id, { notes, admission_type: admissionType });
+      await admissions.updateEnrollment(enrollment.id, {
+        notes,
+        admission_type: admissionType,
+        course,
+        session
+      });
       toast.success('✓ Enrollment updated successfully.');
       setTimeout(() => onBack(), 800);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Enrollment update failed');
+      const msg = err instanceof Error ? err.message : 'Enrollment update failed';
+      try {
+        const parsed = JSON.parse(msg);
+        if (parsed.session) {
+          setError(parsed.session[0] || parsed.session);
+        } else if (parsed.detail) {
+          setError(parsed.detail);
+        } else {
+          setError(msg);
+        }
+      } catch {
+        setError(msg);
+      }
       toast.error('Enrollment update failed.');
     } finally {
       setSubmitting(false);
@@ -939,11 +994,34 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
 
       <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-6 space-y-4 max-w-2xl">
         <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">Admission Type</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Course *</label>
+          <Combobox
+            options={courses.map(c => ({ value: c.id, label: `${c.name} — ${c.university_name || 'No University'}` }))}
+            value={course}
+            onChange={(val) => { setCourse(val); setValidation(null); }}
+            onBlur={preflight}
+            placeholder="Search course…"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Intake Session *</label>
+          <Combobox
+            options={sessions.map(s => ({ value: s.id, label: `${s.session_name} ${s.is_fresh_allowed ? '(fresh allowed)' : '(continuing only)'}` }))}
+            value={session}
+            onChange={(val) => { setSession(val); setValidation(null); }}
+            onBlur={preflight}
+            placeholder="Search session…"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Admission Type *</label>
           <select
             value={admissionType}
             onChange={(e) => setAdmissionType(e.target.value)}
             className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+            required
           >
             <option value="">Select admission type…</option>
             <option value="fresh">Fresh</option>
@@ -961,10 +1039,28 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
           />
         </div>
 
+        {validation && (
+          <div className={`rounded-md p-3 text-sm border ${
+            validation.valid
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              : 'bg-amber-50 border-amber-200 text-amber-700'
+          }`}>
+            {validation.valid ? (
+              <span>✓ Pre-flight check passed. This enrollment is allowed.</span>
+            ) : (
+              <div>
+                <p className="font-medium">⚠ Rule violation</p>
+                <p className="mt-1">{validation.reason}</p>
+                {validation.suggested && <p className="mt-1 text-xs">Suggested session ID: {validation.suggested}</p>}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex gap-3 pt-4 border-t border-border">
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || (validation !== null && !validation.valid)}
             className="bg-primary text-primary-foreground rounded-md px-6 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
           >
             {submitting ? 'Saving…' : 'Save Changes'}
