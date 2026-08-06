@@ -230,6 +230,72 @@ class EnrollmentSerializer(serializers.ModelSerializer):
         return Enrollment.TRANSITIONS.get(obj.status, [])
 
     def validate(self, attrs):
+        from django.conf import settings
+        
+        # Check if this is an update/partial_update request
+        if self.instance is not None:
+            current_status = self.instance.status
+            lock_status = getattr(settings, 'RESTRICT_EDIT_ENROLLMENT_STATUS', 'Enrolled')
+            
+            STATUS_ORDER = [
+                'Applied',
+                'Document Verified',
+                'Fee Pending',
+                'Fee Paid',
+                'Enrolled',
+                'Enrollment Generated',
+            ]
+            
+            if current_status == 'Cancelled':
+                raise serializers.ValidationError("Updates are not allowed for Cancelled enrollments.")
+                
+            if current_status in STATUS_ORDER:
+                target_lock = lock_status if lock_status in STATUS_ORDER else 'Enrolled'
+                if STATUS_ORDER.index(current_status) >= STATUS_ORDER.index(target_lock):
+                    raise serializers.ValidationError(
+                        f"Updates are not allowed once enrollment has reached status '{target_lock}'."
+                    )
+
+            # Validate eligibility & matrix if course or session is being updated
+            student = attrs.get('student', self.instance.student)
+            course = attrs.get('course', self.instance.course)
+            session = attrs.get('session', self.instance.session)
+            
+            if (attrs.get('course') is not None and attrs.get('course') != self.instance.course) or \
+               (attrs.get('session') is not None and attrs.get('session') != self.instance.session) or \
+               (attrs.get('student') is not None and attrs.get('student') != self.instance.student):
+                
+                from apps.rules.engine import validate_enrollment
+                # Eligibility check (Gap 8)
+                eligibility = course.eligibility_criteria_json or {}
+                if eligibility:
+                    req_qual = eligibility.get('min_qualification')
+                    req_score = eligibility.get('min_score_percentage')
+                    if req_qual or req_score:
+                        histories = student.academic_histories.all()
+                        if not histories:
+                            raise serializers.ValidationError({'course': 'Student has no academic history to verify eligibility.'})
+                        
+                        passed_eligibility = False
+                        for h in histories:
+                            if req_qual and h.qualification != req_qual:
+                                continue
+                            if req_score:
+                                if h.score_type != 'percentage' or h.score_value < float(req_score):
+                                    continue
+                            passed_eligibility = True
+                            break
+                        if not passed_eligibility:
+                            raise serializers.ValidationError({'course': f'Student does not meet minimum eligibility criteria (Required: {req_qual}, {req_score}%).'})
+
+                # Session Enforcement Matrix
+                result = validate_enrollment(student, course, session)
+                if not result.valid:
+                    raise serializers.ValidationError({
+                        'session': result.reason,
+                        'suggested_session': str(result.suggested_session_id) if result.suggested_session_id else None,
+                    })
+
         """On create: run Session Enforcement Matrix validation."""
         course = attrs.get('course')
         if course:
@@ -263,8 +329,9 @@ class EnrollmentSerializer(serializers.ModelSerializer):
                             # basic check: if req_qual matches or is not specified, check score
                             if req_qual and h.qualification != req_qual:
                                 continue
-                            if req_score and h.score_type == 'percentage' and h.score_value < float(req_score):
-                                continue
+                            if req_score:
+                                if h.score_type != 'percentage' or h.score_value < float(req_score):
+                                    continue
                             passed_eligibility = True
                             break
                         
