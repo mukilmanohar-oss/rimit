@@ -8,6 +8,19 @@ import { exportToCSV } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../rimit-shell';
 import { Combobox } from '@/components/ui/combobox';
+const STATUS_ORDER = ['Applied', 'Document Verified', 'Fee Pending', 'Fee Paid', 'Enrolled', 'Enrollment Generated'];
+
+export function isEnrollmentEditable(status: string): boolean {
+  if (status === 'Cancelled') return false;
+  const lockStatus = process.env.NEXT_PUBLIC_RESTRICT_EDIT_ENROLLMENT_STATUS || 'Enrolled';
+  const targetLock = STATUS_ORDER.includes(lockStatus) ? lockStatus : 'Enrolled';
+  
+  const currentIndex = STATUS_ORDER.indexOf(status);
+  const lockIndex = STATUS_ORDER.indexOf(targetLock);
+  
+  if (currentIndex === -1 || lockIndex === -1) return true;
+  return currentIndex < lockIndex;
+}
 
 export function EnrollmentsView({ profile }: { profile: UserProfile }) {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -65,7 +78,14 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
       enrollment={selected}
       profile={profile}
       onBack={() => { setSelected(null); load(); }}
-      onEdit={() => { setEditingEnrollment(selected); setSelected(null); }}
+      onEdit={() => {
+        if (isEnrollmentEditable(selected.status)) {
+          setEditingEnrollment(selected);
+          setSelected(null);
+        } else {
+          toast.error('Editing is not allowed for this enrollment status.');
+        }
+      }}
       canUpdate={canUpdate}
     />;
   }
@@ -427,7 +447,7 @@ function EnrollmentDetail({
         subtitle={detail.enrollment_number || `ID: ${detail.id.slice(0, 8)}`}
         action={
           <div className="flex gap-2">
-            {canUpdate && (
+            {canUpdate && isEnrollmentEditable(detail.status) && (
               <button
                 onClick={onEdit}
                 className="border border-border text-foreground hover:bg-muted rounded-md px-3 py-1.5 text-sm font-medium"
@@ -891,6 +911,11 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isEnrollmentEditable(enrollment.status)) {
+      setError('Editing is not allowed for this enrollment status.');
+      toast.error('Editing is not allowed for this enrollment status.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {

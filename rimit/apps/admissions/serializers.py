@@ -230,6 +230,32 @@ class EnrollmentSerializer(serializers.ModelSerializer):
         return Enrollment.TRANSITIONS.get(obj.status, [])
 
     def validate(self, attrs):
+        from django.conf import settings
+        
+        # Check if this is an update/partial_update request
+        if self.instance is not None:
+            current_status = self.instance.status
+            lock_status = getattr(settings, 'RESTRICT_EDIT_ENROLLMENT_STATUS', 'Enrolled')
+            
+            STATUS_ORDER = [
+                'Applied',
+                'Document Verified',
+                'Fee Pending',
+                'Fee Paid',
+                'Enrolled',
+                'Enrollment Generated',
+            ]
+            
+            if current_status == 'Cancelled':
+                raise serializers.ValidationError("Updates are not allowed for Cancelled enrollments.")
+                
+            if current_status in STATUS_ORDER:
+                target_lock = lock_status if lock_status in STATUS_ORDER else 'Enrolled'
+                if STATUS_ORDER.index(current_status) >= STATUS_ORDER.index(target_lock):
+                    raise serializers.ValidationError(
+                        f"Updates are not allowed once enrollment has reached status '{target_lock}'."
+                    )
+
         """On create: run Session Enforcement Matrix validation."""
         course = attrs.get('course')
         if course:

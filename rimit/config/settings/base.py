@@ -194,6 +194,8 @@ FILE_UPLOAD_HANDLERS = [
 PRESIGNED_URL_TTL_SECONDS = 900
 NOTIFICATION_CHANNELS = ['whatsapp', 'sms', 'email']
 
+RESTRICT_EDIT_ENROLLMENT_STATUS = os.environ.get('RESTRICT_EDIT_ENROLLMENT_STATUS', 'Enrolled')
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
