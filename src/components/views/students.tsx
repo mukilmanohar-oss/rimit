@@ -267,20 +267,13 @@ function StudentRegistrationForm({ onBack, onCancel }: { onBack: () => void; onC
     primary_phone: '', email: '', aadhar_number: '',
     father_name: '', mother_name: '', parent_phone: '',
     alternate_phone: '', alternate_email: '',
-    admission_type: 'Fresh', admission_semester: '1',
     address_line1: '', address_city: '', address_state: '', address_district: '', address_pincode: '',
-    same_as_permanent: true,
-    course_id: '', sub_course: ''
+    same_as_permanent: true
   });
-  const [courses, setCourses] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aadharWarning, setAadharWarning] = useState<string | null>(null);
   const [consentGiven, setConsentGiven] = useState(false);
-
-  useEffect(() => {
-    aggregator.listCourses().then(res => setCourses(res.results)).catch(console.error);
-  }, []);
 
   const handleAadharBlur = async () => {
     const clean = form.aadhar_number.replace(/\\s/g, '');
@@ -303,7 +296,7 @@ function StudentRegistrationForm({ onBack, onCancel }: { onBack: () => void; onC
     const phoneValid = /^[0-9]{10}$/.test(form.primary_phone);
     const emailValid = form.email ? /^[^@]+@[^@]+\.[^@]+$/.test(form.email) : true;
     const aadharValid = form.aadhar_number.replace(/\s/g, '').length === 12;
-    return form.full_name && form.dob && phoneValid && emailValid && aadharValid && form.course_id && consentGiven;
+    return form.full_name && form.dob && phoneValid && emailValid && aadharValid && consentGiven;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -325,10 +318,6 @@ function StudentRegistrationForm({ onBack, onCancel }: { onBack: () => void; onC
         parent_phone: form.parent_phone,
         alternate_phone: form.alternate_phone,
         alternate_email: form.alternate_email,
-        admission_type: form.admission_type,
-        admission_semester: form.admission_semester,
-        course: form.course_id,
-        sub_course: form.sub_course,
         address_block: {
           perm_domicile_type: 'Other',
           domicile_state: form.address_state,
@@ -387,14 +376,6 @@ function StudentRegistrationForm({ onBack, onCancel }: { onBack: () => void; onC
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Admission Type</label>
-              <select value={form.admission_type} onChange={e => set('admission_type', e.target.value)} className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm">
-                <option value="Fresh">Fresh</option>
-                <option value="Lateral">Lateral</option>
-              </select>
-            </div>
-            <Field label="Admission Semester" value={form.admission_semester} onChange={v => set('admission_semester', v)} />
-            <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Aadhar Number (12 digits) *</label>
               <input
                 type="text" value={form.aadhar_number} onChange={e => { set('aadhar_number', e.target.value); setAadharWarning(null); }}
@@ -406,26 +387,13 @@ function StudentRegistrationForm({ onBack, onCancel }: { onBack: () => void; onC
           </div>
         </div>
 
-        {/* Academic Profile */}
-        <div>
-          <h3 className="text-sm font-semibold mb-3 text-foreground border-b border-border pb-2">Academic Profile</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Target Course *</label>
-              <select value={form.course_id} onChange={e => set('course_id', e.target.value)} className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm" required>
-                <option value="">Select Course...</option>
-                {courses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.stream})</option>)}
-              </select>
-            </div>
-            <Field label="Sub-Course Specialization" value={form.sub_course} onChange={v => set('sub_course', v)} />
-          </div>
-        </div>
+        {/* Academic Profile section has been removed from rendering */}
 
         {/* Contact */}
         <div>
           <h3 className="text-sm font-semibold mb-3 text-foreground border-b border-border pb-2">Contact</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Primary Phone (+91XXXXXXXXXX) *" value={form.primary_phone} onChange={v => set('primary_phone', v)} required pattern="^[0-9]{10}$" />
+            <Field label="Primary Phone *" value={form.primary_phone} onChange={v => set('primary_phone', v)} required pattern="^[0-9]{10}$" />
             <Field label="Alternate Phone" value={form.alternate_phone} onChange={v => set('alternate_phone', v)} />
             <Field label="Email" type="email" value={form.email} onChange={v => set('email', v)} pattern="^[^@]+@[^@]+.[^@]+$" />
             <Field label="Alternate Email" type="email" value={form.alternate_email} onChange={v => set('alternate_email', v)} />
