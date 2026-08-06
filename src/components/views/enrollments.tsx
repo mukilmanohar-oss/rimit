@@ -93,7 +93,7 @@ export function EnrollmentsView({ profile }: { profile: UserProfile }) {
   if (editingEnrollment) {
     return <EnrollmentEditForm
       enrollment={editingEnrollment}
-      onBack={() => { setEditingEnrollment(null); setSelected(editingEnrollment); load(); }}
+      onBack={(updated) => { setEditingEnrollment(null); setSelected(updated || editingEnrollment); load(); }}
       onCancel={() => { setEditingEnrollment(null); setSelected(editingEnrollment); }}
     />;
   }
@@ -903,7 +903,7 @@ function EnrollmentCreateForm({ onBack, onCancel }: { onBack: () => void; onCanc
 }
 
 // ─── Enrollment Edit Form ────────────────────────────────────────────────────
-function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enrollment; onBack: () => void; onCancel: () => void }) {
+function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enrollment; onBack: (updated?: Enrollment) => void; onCancel: () => void }) {
   const [notes, setNotes] = useState(enrollment.notes || '');
   const [admissionType, setAdmissionType] = useState((enrollment as any).admission_type || '');
   const [course, setCourse] = useState(enrollment.course || '');
@@ -957,14 +957,14 @@ function EnrollmentEditForm({ enrollment, onBack, onCancel }: { enrollment: Enro
     setSubmitting(true);
     setError(null);
     try {
-      await admissions.updateEnrollment(enrollment.id, {
+      const updated = await admissions.updateEnrollment(enrollment.id, {
         notes,
         admission_type: admissionType,
         course,
         session
       });
       toast.success('✓ Enrollment updated successfully.');
-      setTimeout(() => onBack(), 800);
+      setTimeout(() => onBack(updated), 800);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Enrollment update failed';
       try {
