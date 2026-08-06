@@ -220,6 +220,7 @@ class EnrollmentSerializer(serializers.ModelSerializer):
     session_name = serializers.CharField(source='session.session_name', read_only=True)
     sub_center_code = serializers.CharField(source='sub_center.center_code', read_only=True)
     next_valid_statuses = serializers.SerializerMethodField()
+    admission_semester = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Enrollment
@@ -228,6 +229,46 @@ class EnrollmentSerializer(serializers.ModelSerializer):
 
     def get_next_valid_statuses(self, obj):
         return Enrollment.TRANSITIONS.get(obj.status, [])
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        ret['admission_semester'] = instance.student.admission_semester if instance.student else ""
+        return ret
+
+    _MISSING = object()
+
+    def create(self, validated_data):
+        admission_semester = validated_data.pop('admission_semester', self._MISSING)
+        admission_type = validated_data.get('admission_type', self._MISSING)
+        enrollment = super().create(validated_data)
+        self._sync_student_admission_fields(enrollment.student, admission_type, admission_semester)
+        return enrollment
+
+    def update(self, instance, validated_data):
+        admission_semester = validated_data.pop('admission_semester', self._MISSING)
+        admission_type = validated_data.get('admission_type', self._MISSING)
+        enrollment = super().update(instance, validated_data)
+        self._sync_student_admission_fields(enrollment.student, admission_type, admission_semester)
+        return enrollment
+
+    def _sync_student_admission_fields(self, student, admission_type, admission_semester):
+        updated = False
+        update_fields = []
+
+        if admission_semester is not self._MISSING:
+            if student.admission_semester != admission_semester:
+                student.admission_semester = admission_semester
+                updated = True
+                update_fields.append('admission_semester')
+
+        if admission_type is not self._MISSING:
+            if student.admission_type != admission_type:
+                student.admission_type = admission_type
+                updated = True
+                update_fields.append('admission_type')
+
+        if updated:
+            student.save(update_fields=update_fields)
 
     def validate(self, attrs):
         """On create: run Session Enforcement Matrix validation."""

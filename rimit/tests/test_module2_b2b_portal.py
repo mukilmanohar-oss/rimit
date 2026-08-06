@@ -345,3 +345,113 @@ class TestEnrollmentStateMachine(BaseAPITestCase):
         assert 'next_valid_statuses' in resp.data
         assert Enrollment.STATUS_DOC_VERIFIED in resp.data['next_valid_statuses']
         assert Enrollment.STATUS_CANCELLED in resp.data['next_valid_statuses']
+
+    def test_enrollment_creation_updates_student_admission_semester_and_type(self):
+        student = StudentFactory(sub_center=self.center_a)
+        student.admission_semester = ""
+        student.admission_type = ""
+        student.save()
+
+        uni = UniversityFactory()
+        course = CourseFactory(university=uni)
+        session = IntakeSessionFactory(is_fresh_allowed=True)
+
+        client = self.counselor_client(sub_center=self.center_a)
+        resp = client.post('/api/v1/enrollments', json.dumps({
+            'student': str(student.id),
+            'course': str(course.id),
+            'session': str(session.id),
+            'admission_type': 'fresh',
+            'admission_semester': 'Semester 1',
+        }), content_type='application/json')
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.content
+
+        # Verify student fields got updated
+        student.refresh_from_db()
+        assert student.admission_semester == 'Semester 1'
+        assert student.admission_type == 'fresh'
+
+    def test_enrollment_update_updates_student_admission_semester_and_type(self):
+        enrollment = self._setup_enrollment()
+        student = enrollment.student
+        student.admission_semester = "Semester 1"
+        student.admission_type = "fresh"
+        student.save()
+
+        client = self.counselor_client(sub_center=self.center_a)
+        resp = client.patch(f'/api/v1/enrollments/{enrollment.id}', json.dumps({
+            'admission_type': 'lateral',
+            'admission_semester': 'Semester 2',
+        }), content_type='application/json')
+
+        assert resp.status_code == status.HTTP_200_OK, resp.content
+        student.refresh_from_db()
+        assert student.admission_semester == 'Semester 2'
+        assert student.admission_type == 'lateral'
+
+    def test_enrollment_creation_independent_fields(self):
+        # 1. Create with only admission_type
+        student1 = StudentFactory(sub_center=self.center_a)
+        student1.admission_semester = "Initial Semester"
+        student1.admission_type = "Initial Type"
+        student1.save()
+
+        uni = UniversityFactory()
+        course = CourseFactory(university=uni)
+        session = IntakeSessionFactory(is_fresh_allowed=True)
+
+        client = self.counselor_client(sub_center=self.center_a)
+        resp = client.post('/api/v1/enrollments', json.dumps({
+            'student': str(student1.id),
+            'course': str(course.id),
+            'session': str(session.id),
+            'admission_type': 'fresh',
+        }), content_type='application/json')
+        assert resp.status_code == status.HTTP_201_CREATED, resp.content
+        student1.refresh_from_db()
+        assert student1.admission_type == 'fresh'
+        assert student1.admission_semester == 'Initial Semester'
+
+        # 2. Create with only admission_semester
+        student2 = StudentFactory(sub_center=self.center_a)
+        student2.admission_semester = "Initial Semester"
+        student2.admission_type = "Initial Type"
+        student2.save()
+
+        resp = client.post('/api/v1/enrollments', json.dumps({
+            'student': str(student2.id),
+            'course': str(course.id),
+            'session': str(session.id),
+            'admission_semester': 'Semester 1',
+        }), content_type='application/json')
+        assert resp.status_code == status.HTTP_201_CREATED, resp.content
+        student2.refresh_from_db()
+        assert student2.admission_type == 'Initial Type'
+        assert student2.admission_semester == 'Semester 1'
+
+    def test_enrollment_update_independent_fields(self):
+        enrollment = self._setup_enrollment()
+        student = enrollment.student
+        student.admission_semester = "Initial Semester"
+        student.admission_type = "fresh"
+        student.save()
+
+        client = self.counselor_client(sub_center=self.center_a)
+        # 1. Update only admission_type
+        resp = client.patch(f'/api/v1/enrollments/{enrollment.id}', json.dumps({
+            'admission_type': 'lateral',
+        }), content_type='application/json')
+        assert resp.status_code == status.HTTP_200_OK, resp.content
+        student.refresh_from_db()
+        assert student.admission_type == 'lateral'
+        assert student.admission_semester == 'Initial Semester'
+
+        # 2. Update only admission_semester
+        resp = client.patch(f'/api/v1/enrollments/{enrollment.id}', json.dumps({
+            'admission_semester': 'New Semester',
+        }), content_type='application/json')
+        assert resp.status_code == status.HTTP_200_OK, resp.content
+        student.refresh_from_db()
+        assert student.admission_type == 'lateral'
+        assert student.admission_semester == 'New Semester'
