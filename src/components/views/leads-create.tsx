@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { UserProfile, admissions } from '@/lib/api';
+import { PageHeader } from '../rimit-shell';
 
 export function LeadsCreateView({ profile }: { profile: UserProfile }) {
   const [step, setStep] = useState(1);
@@ -99,10 +100,10 @@ export function LeadsCreateView({ profile }: { profile: UserProfile }) {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Lead Generator Wizard</h1>
-        <p className="text-muted-foreground mt-1">Universal intake flow for new prospects and leads.</p>
-      </div>
+      <PageHeader
+        title="Lead Generator Wizard"
+        subtitle="Universal intake flow for new prospects and leads."
+      />
 
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden flex flex-col sm:flex-row min-h-[600px]">
         {/* Sidebar steps */}

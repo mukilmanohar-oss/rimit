@@ -40,7 +40,7 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<University | null>(null);
   const [search, setSearch] = useState('');
-  const [stateFilter, setStateFilter] = useState('');
+
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [canNext, setCanNext] = useState(false);
@@ -66,7 +66,7 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
     try {
       const params: Record<string, string> = {};
       if (search) params.search = search;
-      if (stateFilter) params.state = stateFilter;
+
       const data = await aggregator.listUniversities(withPaging(params, { page: targetPage, pageSize: DEFAULT_PAGE_SIZE }));
       setUniversities(data.results);
       setTotalCount(data.count || 0);
@@ -273,22 +273,14 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
       />
 
       {/* Filters */}
-      <div className="flex gap-3 mb-4">
+      <div className="sticky top-20 bg-background/95 backdrop-blur-sm z-20 flex gap-3 py-3 mb-4">
         <input
           type="text"
-          placeholder="Search by name, accreditation…"
+          placeholder="Search by university name, state, or accreditation…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && triggerSearch()}
           className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-        <input
-          type="text"
-          placeholder="State"
-          value={stateFilter}
-          onChange={(e) => setStateFilter(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && triggerSearch()}
-          className="w-40 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <button
           onClick={triggerSearch}
@@ -311,7 +303,7 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
                 <div onClick={() => setSelected(u)} className="flex-1 flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-start mb-2 gap-4">
-                      <h3 className="font-semibold text-lg text-foreground leading-tight flex-1 min-w-0 break-words">{u.name}</h3>
+                      <h3 className="font-semibold text-lg text-foreground leading-tight flex-1 min-w-0 line-clamp-2" title={u.name}>{u.name}</h3>
                       {canUpdate ? (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEditClick(u); }}
@@ -723,22 +715,21 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
 
   return (
     <div>
-      <div className="flex justify-end items-center mb-4">
-        {canDelete && (
-          <button
-            onClick={() => setUniToDelete(true)}
-            className="bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive hover:text-destructive-foreground px-3 py-1.5 rounded text-xs font-semibold"
-          >
-            Delete University
-          </button>
-        )}
-      </div>
-
-        <PageHeader 
-          title={detail.name} 
-          subtitle={`${detail.state} · ${detail.accreditation || 'Not accredited'}`} 
-          breadcrumbs={[{ label: 'Universities', onClick: onBack }, { label: detail.name }]}
-        />
+      <PageHeader
+        title={detail.name}
+        subtitle={`${detail.state} · ${detail.accreditation || 'Not accredited'}`}
+        breadcrumbs={[{ label: 'Universities', onClick: onBack }, { label: detail.name }]}
+        action={
+          canDelete && (
+            <button
+              onClick={() => setUniToDelete(true)}
+              className="bg-destructive text-white hover:bg-destructive/90 rounded-md px-3 py-1.5 text-sm font-medium"
+            >
+              Delete University
+            </button>
+          )
+        }
+      />
 
         {error && (
         <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-md mb-4">

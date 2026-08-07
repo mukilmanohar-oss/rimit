@@ -193,96 +193,106 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col lg:h-full min-h-0 space-y-4">
       <PageHeader
         title="Course & Fee Search Engine"
         subtitle="Search and filter courses across all partner universities with real-time fee breakdown"
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0 lg:grid-rows-1">
         {/* Faceted Filters Sidebar */}
-        <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-6 self-start">
-          <h3 className="font-bold text-foreground text-sm uppercase tracking-wider border-b border-border pb-2">Filters</h3>
-          
-          {/* University Dropdown */}
-          <div className="space-y-2">
-            <label className="block text-xs font-semibold text-muted-foreground">University</label>
-            <select
-              value={uniFilter}
-              onChange={e => { setUniFilter(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">All Universities</option>
-              {universities.map(u => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
+        <div className="bg-card border border-border rounded-xl shadow-sm flex flex-col lg:max-h-full min-h-0 self-start w-full">
+          {/* Sticky Header */}
+          <div className="p-5 pb-3 border-b border-border shrink-0 bg-card rounded-t-xl">
+            <h3 className="font-bold text-foreground text-sm uppercase tracking-wider">Filters</h3>
           </div>
 
-          {/* Stream Checkboxes */}
-          <div className="space-y-2.5">
-            <label className="block text-xs font-semibold text-muted-foreground">Course Stream</label>
+          {/* Scrollable Filter Content */}
+          <div className="flex-1 overflow-y-auto min-h-0 p-5 space-y-6 sidebar-scroll">
+            {/* University Dropdown */}
             <div className="space-y-2">
-              {['Undergraduate', 'Postgraduate', 'Diploma', 'PG Diploma', 'Certification', 'Open Schooling'].map(stream => (
-                <label key={stream} className="flex items-center gap-2.5 text-sm text-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={streams.includes(stream)}
-                    onChange={() => toggleStream(stream)}
-                    className="rounded border-input text-primary focus:ring-ring"
-                  />
-                  {stream}
-                </label>
-              ))}
+              <label className="block text-xs font-semibold text-muted-foreground">University</label>
+              <select
+                value={uniFilter}
+                onChange={e => { setUniFilter(e.target.value); setPage(1); }}
+                className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">All Universities</option>
+                {universities.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
             </div>
-          </div>
 
-          {/* Duration Slider */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center text-xs font-semibold text-muted-foreground">
-              <span>Max Duration</span>
-              <span className="text-primary">{maxDuration} Months</span>
+            {/* Stream Checkboxes */}
+            <div className="space-y-2.5">
+              <label className="block text-xs font-semibold text-muted-foreground">Course Stream</label>
+              <div className="space-y-2">
+                {['Undergraduate', 'Postgraduate', 'Diploma', 'PG Diploma', 'Certification', 'Open Schooling'].map(stream => (
+                  <label key={stream} className="flex items-center gap-2.5 text-sm text-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={streams.includes(stream)}
+                      onChange={() => toggleStream(stream)}
+                      className="rounded border-input text-primary focus:ring-ring"
+                    />
+                    {stream}
+                  </label>
+                ))}
+              </div>
             </div>
-            <input
-              type="range"
-              min="3"
-              max="60"
-              step="3"
-              value={maxDuration}
-              onChange={e => { setMaxDuration(Number(e.target.value)); setPage(1); }}
-              className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground px-1">
-              <span>3m</span>
-              <span>24m</span>
-              <span>48m</span>
-              <span>60m</span>
-            </div>
-          </div>
 
-          {/* Max Budget Input */}
-          <div className="space-y-2">
-            <label className="block text-xs font-semibold text-muted-foreground">Max Budget (Total Fee, ₹)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-2 text-muted-foreground text-sm">₹</span>
+            {/* Duration Slider */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-xs font-semibold text-muted-foreground">
+                <span>Max Duration</span>
+                <span className="text-primary">{maxDuration} Months</span>
+              </div>
               <input
-                type="number"
-                placeholder="E.g., 100000"
-                value={maxBudget}
-                onChange={e => { setMaxBudget(e.target.value); setPage(1); }}
-                className="w-full pl-7 pr-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring font-medium"
+                type="range"
+                min="3"
+                max="60"
+                step="3"
+                value={maxDuration}
+                onChange={e => { setMaxDuration(Number(e.target.value)); setPage(1); }}
+                className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
               />
+              <div className="flex justify-between text-[10px] text-muted-foreground px-1">
+                <span>3m</span>
+                <span>24m</span>
+                <span>48m</span>
+                <span>60m</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Sticky Footer */}
+          <div className="p-5 pt-4 border-t border-border shrink-0 bg-card rounded-b-xl">
+            {/* Max Budget Input */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-muted-foreground">Max Budget (Total Fee, ₹)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-2 text-muted-foreground text-sm">₹</span>
+                <input
+                  type="number"
+                  placeholder="E.g., 100000"
+                  value={maxBudget}
+                  onChange={e => { setMaxBudget(e.target.value); setPage(1); }}
+                  className="w-full pl-7 pr-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring font-medium"
+                />
+              </div>
             </div>
           </div>
         </div>
 
         {/* Results Pane */}
-        <div className="lg:col-span-3 space-y-4">
+        <div className="lg:col-span-3 flex flex-col h-full min-h-0 space-y-4">
           {/* Main Search Bar */}
-          <div className="relative">
-            <span className="absolute left-3.5 top-3 text-muted-foreground">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </span>
+          <div className="lg:sticky lg:top-20 z-20 bg-background/95 backdrop-blur-sm">
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </span>
             <input
               type="text"
               placeholder="Search courses by name, keywords, eligibility requirements..."
@@ -290,6 +300,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
               onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
               className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-border bg-card text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
+            </div>
           </div>
 
           {loading ? (
@@ -299,8 +310,9 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
           ) : totalCount === 0 ? (
             <EmptyState message="No courses match search criteria" />
           ) : (
-            <div className="space-y-4">
-              {courses.map(course => {
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1 overflow-y-auto min-h-0 pr-1 sidebar-scroll space-y-4 pb-2">
+                {courses.map(course => {
                 const isExpanded = expandedCourse === course.id;
                 return (
                   <div
@@ -308,7 +320,7 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                     className="bg-card border border-border rounded-xl shadow-sm overflow-hidden hover:border-primary/45 transition"
                   >
                     <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="space-y-1.5 flex-1">
+                      <div className="space-y-3 flex-1">
                         <div className="flex flex-wrap gap-2 items-center">
                           <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getDocTypeLabelOrColor(course.stream)}`}>
                             {course.stream}
@@ -317,13 +329,49 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                             Duration: {course.duration_months} Months
                           </span>
                         </div>
-                        <h4 className="font-bold text-foreground text-lg">{course.name}</h4>
-                        <p className="text-xs text-muted-foreground">{course.university_name} ({course.university_state})</p>
+                        <h4 className="font-bold text-foreground text-lg lg:text-xl lg:mt-1">{course.name}</h4>
+                        <p className="text-xs text-muted-foreground lg:text-sm">{course.university_name} ({course.university_state})</p>
+
+                        {/* Desktop-Only Fee & Action Footer Row */}
+                        <div className="hidden lg:flex lg:flex-row lg:items-center lg:justify-between lg:pt-3 lg:border-t lg:border-border lg:mt-3">
+                          {/* Fee Section (Left-aligned) */}
+                          <div className="flex flex-row items-center gap-3">
+                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">Total Course Fee</span>
+                            <span className="text-xl font-extrabold text-primary">₹{course.total_fee?.toLocaleString('en-IN') || 0}</span>
+                          </div>
+
+                          {/* Action Buttons (Right-aligned) */}
+                          <div className="flex flex-row items-center gap-4">
+                            {can(profile.role, 'fee_structure', 'read') && (
+                              <button
+                                onClick={() => setExpandedCourse(isExpanded ? null : course.id)}
+                                className="px-3.5 py-1.5 border border-border rounded-lg text-sm font-medium hover:bg-muted transition text-center whitespace-nowrap"
+                              >
+                                {isExpanded ? 'Hide Fees' : 'View Fees'}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDownloadProspectus(course)}
+                              className="px-3.5 py-1.5 border border-border rounded-lg text-sm font-semibold text-primary hover:bg-primary/5 transition text-center whitespace-nowrap"
+                            >
+                              Download Prospectus
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEnrollCourse(course);
+                                setEnrollForm({ student: '', session: '' });
+                              }}
+                              className="bg-primary text-primary-foreground px-3.5 py-1.5 rounded-lg text-sm font-semibold hover:bg-primary/90 transition text-center whitespace-nowrap"
+                            >
+                              Quick Enroll
+                            </button>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 w-full md:w-auto">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 w-full md:w-auto lg:hidden">
                         <div className="flex flex-row items-center justify-between sm:block text-left sm:text-right">
-                          <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">Total Course Fee</p>
+                          <p className="text-xs uppercase font-bold text-muted-foreground tracking-wide">Total Course Fee</p>
                           <p className="text-xl font-extrabold text-primary">₹{course.total_fee?.toLocaleString('en-IN') || 0}</p>
                         </div>
                         
@@ -403,7 +451,8 @@ export function CourseSearchView({ profile }: { profile: UserProfile }) {
                   </div>
                 );
               })}
-              <div className="flex items-center justify-between py-2">
+              </div>
+              <div className="flex items-center justify-between py-2 border-t border-border mt-2 bg-background shrink-0">
                 <span className="text-xs text-muted-foreground">
                   Page {page} of {Math.max(1, Math.ceil(totalCount / DEFAULT_PAGE_SIZE))} (Total {totalCount} records)
                 </span>

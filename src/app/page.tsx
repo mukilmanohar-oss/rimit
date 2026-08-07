@@ -65,7 +65,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-background">
+    <div className="min-h-screen md:h-screen flex flex-col md:flex-row bg-background md:overflow-hidden">
       {/* Mobile Top Navigation */}
       <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-sidebar sticky top-0 z-30">
         <div className="flex items-center gap-2">
@@ -91,7 +91,7 @@ export default function Home() {
         setMobileMenuOpen={setMobileMenuOpen}
       />
       
-      <main className="flex-1 p-4 md:p-8 overflow-x-hidden min-w-0">
+      <main className="flex-1 px-4 md:px-8 pb-4 md:pb-8 pt-0 overflow-y-auto overflow-x-hidden min-w-0">
         {view === 'dashboard' && <DashboardView profile={profile} />}
         {view === 'universities' && <UniversitiesView profile={profile} />}
         {view === 'students' && <StudentsView profile={profile} />}

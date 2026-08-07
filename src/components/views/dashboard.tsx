@@ -129,7 +129,7 @@ export function DashboardView({ profile }: { profile: UserProfile }) {
           <div className="px-5 py-3 border-b border-border bg-muted/30">
             <h2 className="text-sm font-semibold">Live Activity Feed</h2>
           </div>
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-border max-h-[350px] overflow-y-auto sidebar-scroll">
             {(() => {
               const feed = [
                 ...data.recent_enrollments.map(e => ({ type: 'enrollment', time: new Date(e.created_at).getTime(), data: e })),
