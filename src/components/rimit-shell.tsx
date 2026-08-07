@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FiLogOut } from 'react-icons/fi';
+import { KeyRound } from 'lucide-react';
 import {
   auth, aggregator, admissions, partners, rules, finance,
   type UserProfile, type University, type Course, type Student,
@@ -211,7 +213,7 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         } ${collapsed ? 'w-16' : 'w-64'} bg-sidebar border-r border-sidebar-border flex flex-col h-full`}
       >
-        <div className={`p-5 border-b border-sidebar-border flex items-center justify-between ${collapsed ? 'px-2' : ''}`}>
+        <div className={`h-20 flex items-center justify-between border-b border-sidebar-border px-5 shrink-0 ${collapsed ? 'px-2' : ''}`}>
           {!collapsed && (
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -226,19 +228,25 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
             className={`hidden md:block text-muted-foreground hover:text-foreground p-1 ${
               collapsed ? 'mx-auto' : ''
             }`}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!collapsed}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <button onClick={() => setMobileMenuOpen?.(false)} className="md:hidden text-muted-foreground hover:text-foreground p-1">
+          <button
+            onClick={() => setMobileMenuOpen?.(false)}
+            className="md:hidden text-muted-foreground hover:text-foreground w-11 h-11 flex items-center justify-center"
+            aria-label="Close sidebar"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto overflow-x-hidden sidebar-scroll">
           {items.map(item => (
             <button
               key={item.id}
@@ -261,7 +269,7 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
           ))}
         </nav>
 
-      <div className={`p-3 border-t border-sidebar-border ${collapsed ? 'text-center' : ''}`}>
+      <div className={`border-t border-sidebar-border ${collapsed ? 'px-1 py-3 text-center' : 'p-3'}`}>
         {!collapsed ? (
           <div className="px-3 py-2 mb-2">
             <p className="text-sm font-medium text-foreground truncate">{profile.username}</p>
@@ -271,7 +279,7 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
             )}
           </div>
         ) : (
-          <div className="px-3 py-2 mb-2">
+          <div className="px-0 py-2 mb-2">
             <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto text-xs font-bold">
               {profile.username.charAt(0).toUpperCase()}
             </div>
@@ -283,20 +291,24 @@ export function Sidebar({ profile, view, setView, onLogout, mobileMenuOpen, setM
             setMobileMenuOpen?.(false);
           }}
           title="Change Password"
-          className={`w-full text-left px-3 py-2 mb-1 rounded-md text-sm ${
+          className={`w-full flex items-center gap-3 py-2 mb-1 rounded-md text-sm font-medium transition ${
             view === 'change-password'
               ? 'bg-sidebar-primary text-sidebar-primary-foreground'
               : 'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground'
-          } transition ${collapsed ? 'justify-center text-center' : ''}`}
+          } ${collapsed ? 'justify-center px-0' : 'px-3'}`}
         >
-          {collapsed ? '🔑' : 'Change Password'}
+          <KeyRound className="w-4 h-4 flex-shrink-0" />
+          {!collapsed && "Change Password"}
         </button>
         <button
           onClick={onLogout}
           title="Sign Out"
-          className={`w-full text-left px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition ${collapsed ? 'justify-center text-center' : ''}`}
+          className={`w-full flex items-center gap-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition ${
+            collapsed ? 'justify-center px-0' : 'px-3'
+          }`}
         >
-          {collapsed ? '🚪' : 'Sign Out'}
+          <FiLogOut className="w-4 h-4 flex-shrink-0" />
+          {!collapsed && "Sign Out"}
         </button>
       </div>
 
@@ -339,7 +351,7 @@ export function PageHeader({ title, subtitle, action, breadcrumbs }: {
   breadcrumbs?: { label: string; onClick?: () => void }[];
 }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 pb-4 border-b border-border">
+    <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-3 min-h-20 border-b border-border mb-6 shrink-0">
       <div>
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav className="flex text-xs text-muted-foreground mb-2 items-center space-x-2">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { UserProfile, admissions, DEFAULT_PAGE_SIZE, withPaging, hasNextPage, hasPrevPage, type Student, type Paginated } from '@/lib/api';
+import { PageHeader } from '../rimit-shell';
 
 export function LeadsView({ profile }: { profile: UserProfile }) {
   const [leads, setLeads] = useState<any[]>([]);
@@ -43,32 +44,32 @@ export function LeadsView({ profile }: { profile: UserProfile }) {
   }, [fetchLeads]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)]">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 shrink-0">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Leads Directory</h1>
-          <p className="text-muted-foreground mt-1">High-density data grid of all prospective students.</p>
-        </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-72">
-            <svg className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search leads..."
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1); }}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
-            />
+    <div className="flex flex-col h-full">
+      <PageHeader
+        title="Leads Directory"
+        subtitle="High-density data grid of all prospective students."
+        action={
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-72">
+              <svg className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search leads..."
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1); }}
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
+              />
+            </div>
+            <button onClick={fetchLeads} className="bg-secondary text-secondary-foreground hover:bg-secondary/80 p-2 rounded-lg transition-colors border border-border shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
           </div>
-          <button onClick={fetchLeads} className="bg-secondary text-secondary-foreground hover:bg-secondary/80 p-2 rounded-lg transition-colors border border-border shrink-0">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="bg-card border border-border shadow-sm rounded-xl flex-1 flex flex-col overflow-hidden relative">
         {loading && (
