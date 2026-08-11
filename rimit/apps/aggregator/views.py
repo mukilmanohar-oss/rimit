@@ -133,6 +133,12 @@ class CourseViewSet(TenantAwareViewMixin, viewsets.ModelViewSet):
         if uni_pct is None:
             uni_pct = course.university.default_university_share_percent
 
+        if uni_pct is None or uni_pct == 0:
+            return Response(
+                {"detail": "Unable to determine the University Share %. Please configure either the University's Default University Share % or the Course University Share % Override before continuing."},
+                status=400
+            )
+
         tenant_id = _current_tenant_id()
         sc_comm_pct = Decimal('0.00')
 

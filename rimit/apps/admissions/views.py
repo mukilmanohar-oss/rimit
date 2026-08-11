@@ -326,9 +326,6 @@ class EnrollmentViewSet(AuditLogMixin, TenantAwareViewMixin, viewsets.ModelViewS
         except (ValueError, InvalidOperation):
             return Response({"amount": ["Amount must be a valid number."]}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not amount.is_finite():
-            return Response({"amount": ["Amount must be a finite number."]}, status=status.HTTP_400_BAD_REQUEST)
-
         # Normalize precision to 2 decimal places max
         amount = amount.quantize(Decimal('0.01'))
 

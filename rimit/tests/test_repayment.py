@@ -18,7 +18,7 @@ class TestRepaymentFeature(BaseAPITestCase):
     def setUp(self):
         super().setUp()
         self.session = IntakeSessionFactory(is_active=True, is_fresh_allowed=True)
-        self.uni = UniversityFactory(default_university_share_percent=Decimal('50.00'))
+        self.uni = UniversityFactory()
         self.course = CourseFactory(university=self.uni)
         SubCenterUniversityMapping.objects.create(sub_center=self.center_a, university=self.uni)
         

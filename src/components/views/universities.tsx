@@ -9,6 +9,31 @@ import { toast } from 'sonner';
 import { FaEdit } from 'react-icons/fa';
 import { MdDelete } from 'react-icons/md';
 
+const getFriendlyErrorMessage = (err: unknown, defaultMsg: string): string => {
+  if (err instanceof Error) {
+    try {
+      const parsed = JSON.parse(err.message);
+      if (parsed && typeof parsed === 'object') {
+        const firstKey = Object.keys(parsed)[0];
+        const errorList = parsed[firstKey];
+        if (Array.isArray(errorList) && errorList.length > 0) {
+          const rawMsg = errorList[0];
+          return rawMsg.charAt(0).toUpperCase() + rawMsg.slice(1);
+        } else if (typeof errorList === 'string') {
+          return errorList.charAt(0).toUpperCase() + errorList.slice(1);
+        } else if (parsed.detail) {
+          return parsed.detail;
+        }
+      }
+    } catch (e) {
+      if (err.message && !err.message.includes('HTTP')) {
+        return err.message;
+      }
+    }
+  }
+  return defaultMsg;
+};
+
 export function UniversitiesView({ profile }: { profile: UserProfile }) {
   const [universities, setUniversities] = useState<University[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +88,24 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
 
   const handleCreateUni = async (e: React.FormEvent) => {
     e.preventDefault();
+    const sharePercentStr = uniForm.default_university_share_percent;
+    if (sharePercentStr === '' || sharePercentStr === null || sharePercentStr === undefined) {
+      setError("Default university share percentage is required.");
+      return;
+    }
+    const sharePercent = Number(sharePercentStr);
+    if (isNaN(sharePercent)) {
+      setError("Default university share percentage must be a valid number.");
+      return;
+    }
+    if (sharePercent <= 0) {
+      setError("Default university share percentage must be greater than 0.");
+      return;
+    }
+    if (sharePercent > 100) {
+      setError("Default university share percentage cannot be greater than 100.");
+      return;
+    }
     setSubmittingUni(true);
     setError(null);
     try {
@@ -77,29 +120,7 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
       setEditingUni(null);
       setUniForm({ name: '', state: '', accreditation: '', description: '', default_university_share_percent: '' });
       load();
-    } catch (err) {
-      let errorMsg = `Failed to ${editingUni ? 'update' : 'create'} university`;
-      if (err instanceof Error) {
-        try {
-          const parsed = JSON.parse(err.message);
-          if (parsed && typeof parsed === 'object') {
-            const firstKey = Object.keys(parsed)[0];
-            const errorList = parsed[firstKey];
-            if (Array.isArray(errorList) && errorList.length > 0) {
-              const rawMsg = errorList[0];
-              errorMsg = rawMsg.charAt(0).toUpperCase() + rawMsg.slice(1);
-            } else if (typeof errorList === 'string') {
-              errorMsg = errorList.charAt(0).toUpperCase() + errorList.slice(1);
-            } else if (parsed.detail) {
-              errorMsg = parsed.detail;
-            }
-          }
-        } catch (e) {
-          if (err.message && !err.message.includes('HTTP')) {
-            errorMsg = err.message;
-          }
-        }
-      }
+      const errorMsg = getFriendlyErrorMessage(err, `Failed to ${editingUni ? 'update' : 'create'} university`);
       setError(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -141,11 +162,16 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
         <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-border overflow-hidden">
           <div className="px-6 py-4 border-b border-border flex justify-between items-center">
             <h3 className="font-semibold text-lg">{editingUni ? 'Edit University' : 'Add New University'}</h3>
-            <button onClick={() => { setShowAddUni(false); setEditingUni(null); }} className="text-muted-foreground hover:text-foreground">
+            <button onClick={() => { setShowAddUni(false); setEditingUni(null); setError(null); }} className="text-muted-foreground hover:text-foreground">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
           <form onSubmit={handleCreateUni} className="p-6 space-y-4">
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-md">
+                {error}
+              </div>
+            )}
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">University Name *</label>
               <input
@@ -188,7 +214,7 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Default University Share % (of Total Fee)</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Default University Share % (of Total Fee) *</label>
               <input
                 type="number"
                 step="0.01"
@@ -197,6 +223,7 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
                 value={uniForm.default_university_share_percent}
                 onChange={e => setUniForm(prev => ({ ...prev, default_university_share_percent: e.target.value }))}
                 placeholder="E.g., 50.00"
+                required
                 className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
               />
               <p className="text-[11px] text-muted-foreground mt-1">University’s default share of Total Fee (0–100%). Courses may override.</p>
@@ -204,14 +231,14 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => { setShowAddUni(false); setEditingUni(null); }}
+                onClick={() => { setShowAddUni(false); setEditingUni(null); setError(null); }}
                 className="px-4 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={submittingUni || !uniForm.name || !uniForm.state}
+                disabled={submittingUni}
                 className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
                 {submittingUni ? 'Saving...' : editingUni ? 'Update' : 'Create'}
@@ -233,7 +260,8 @@ export function UniversitiesView({ profile }: { profile: UserProfile }) {
             <button
               onClick={() => {
                 setEditingUni(null);
-                setUniForm({ name: '', state: '', accreditation: '', description: '' });
+                setUniForm({ name: '', state: '', accreditation: '', description: '', default_university_share_percent: '' });
+                setError(null);
                 setShowAddUni(true);
               }}
               className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90"
@@ -344,6 +372,7 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
   const [detail, setDetail] = useState<University | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [courseError, setCourseError] = useState<string | null>(null);
 
   // Add Course form state
   const [showAddCourse, setShowAddCourse] = useState(false);
@@ -353,6 +382,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
     duration_months: 36,
     eligibility_text: '',
     university_share_percent: '',
+    course_fee: '',
+    registration_fee: '',
   });
   const [submittingCourse, setSubmittingCourse] = useState(false);
 
@@ -364,6 +395,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
     duration_months: 36,
     eligibility_text: '',
     university_share_percent: '',
+    course_fee: '',
+    registration_fee: '',
   });
   const [submittingEditCourse, setSubmittingEditCourse] = useState(false);
 
@@ -415,40 +448,98 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
 
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
+    const courseFee = Number(courseForm.course_fee);
+    if (!courseForm.course_fee || isNaN(courseFee) || courseFee <= 0) {
+      setCourseError("Course Fee is required and must be greater than 0.");
+      return;
+    }
+    if (courseForm.registration_fee !== '') {
+      const regFee = Number(courseForm.registration_fee);
+      if (isNaN(regFee) || regFee <= 0) {
+        setCourseError("Registration Fee must be greater than 0.");
+        return;
+      }
+    }
+    if (courseForm.university_share_percent !== '') {
+      const sharePercent = Number(courseForm.university_share_percent);
+      if (isNaN(sharePercent)) {
+        setCourseError("University share percentage override must be a valid number.");
+        return;
+      }
+      if (sharePercent <= 0) {
+        setCourseError("University share percentage override must be greater than 0.");
+        return;
+      }
+      if (sharePercent > 100) {
+        setCourseError("University share percentage override cannot be greater than 100.");
+        return;
+      }
+    }
+    const isOverrideBlank = courseForm.university_share_percent === '';
+    const defaultShare = detail?.default_university_share_percent;
+    const isDefaultInvalid = defaultShare === null || defaultShare === undefined || Number(defaultShare) === 0;
+
+    if (isOverrideBlank && isDefaultInvalid) {
+      setCourseError("Unable to determine the University Share %. Please configure either the University's Default University Share % or the Course University Share % Override before continuing.");
+      return;
+    }
     setSubmittingCourse(true);
-    setError(null);
+    setCourseError(null);
 
     const cleanedName = courseForm.name.trim().toLowerCase();
     const isDuplicate = detail?.courses?.some(
       (c: any) => c.name.trim().toLowerCase() === cleanedName
     );
     if (isDuplicate) {
-      setError("A course with this name already exists under this university.");
-      setSubmittingCourse(false);
-      return;
-    }
-
-    if (!courseForm.university_share_percent) {
-      setError("University share percentage override is required.");
+      setCourseError("A course with this name already exists under this university.");
       setSubmittingCourse(false);
       return;
     }
 
     try {
-      await aggregator.createCourse({
+      const newCourse = await aggregator.createCourse({
         university: university.id,
         name: courseForm.name,
         stream: courseForm.stream,
         duration_months: Number(courseForm.duration_months),
         eligibility_text: courseForm.eligibility_text,
-        university_share_percent: courseForm.university_share_percent ? Number(courseForm.university_share_percent) : undefined,
+        university_share_percent: courseForm.university_share_percent ? Number(courseForm.university_share_percent) : null,
         is_active: true,
       });
-      setCourseForm({ name: '', stream: 'Undergraduate', duration_months: 36, eligibility_text: '', university_share_percent: '' });
+
+      // Create Course Fee
+      await aggregator.createFee({
+        course: newCourse.id,
+        fee_type: 'course_fee',
+        amount: courseForm.course_fee,
+        currency: 'INR',
+        is_active: true,
+      });
+
+      // Create Registration Fee if specified
+      if (courseForm.registration_fee) {
+        await aggregator.createFee({
+          course: newCourse.id,
+          fee_type: 'registration_fee',
+          amount: courseForm.registration_fee,
+          currency: 'INR',
+          is_active: true,
+        });
+      }
+
+      setCourseForm({
+        name: '',
+        stream: 'Undergraduate',
+        duration_months: 36,
+        eligibility_text: '',
+        university_share_percent: '',
+        course_fee: '',
+        registration_fee: '',
+      });
       setShowAddCourse(false);
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create course');
+      setCourseError(getFriendlyErrorMessage(err, 'Failed to create course'));
     } finally {
       setSubmittingCourse(false);
     }
@@ -457,8 +548,43 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
   const handleUpdateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCourse) return;
+    const courseFee = Number(editCourseForm.course_fee);
+    if (!editCourseForm.course_fee || isNaN(courseFee) || courseFee <= 0) {
+      setCourseError("Course Fee is required and must be greater than 0.");
+      return;
+    }
+    if (editCourseForm.registration_fee !== '') {
+      const regFee = Number(editCourseForm.registration_fee);
+      if (isNaN(regFee) || regFee <= 0) {
+        setCourseError("Registration Fee must be greater than 0.");
+        return;
+      }
+    }
+    if (editCourseForm.university_share_percent !== '') {
+      const sharePercent = Number(editCourseForm.university_share_percent);
+      if (isNaN(sharePercent)) {
+        setCourseError("University share percentage override must be a valid number.");
+        return;
+      }
+      if (sharePercent <= 0) {
+        setCourseError("University share percentage override must be greater than 0.");
+        return;
+      }
+      if (sharePercent > 100) {
+        setCourseError("University share percentage override cannot be greater than 100.");
+        return;
+      }
+    }
+    const isOverrideBlank = editCourseForm.university_share_percent === '';
+    const defaultShare = detail?.default_university_share_percent;
+    const isDefaultInvalid = defaultShare === null || defaultShare === undefined || Number(defaultShare) === 0;
+
+    if (isOverrideBlank && isDefaultInvalid) {
+      setCourseError("Unable to determine the University Share %. Please configure either the University's Default University Share % or the Course University Share % Override before continuing.");
+      return;
+    }
     setSubmittingEditCourse(true);
-    setError(null);
+    setCourseError(null);
     try {
       const payload: any = {};
       
@@ -479,23 +605,52 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
         ? editingCourse.university_share_percent.toString()
         : '';
       
-      if (originalShare !== '' && editCourseForm.university_share_percent === '') {
-        setError("University share percentage cannot be cleared once set.");
-        setSubmittingEditCourse(false);
-        return;
-      }
-
       if (editCourseForm.university_share_percent !== originalShare) {
-        if (editCourseForm.university_share_percent !== '') {
-          payload.university_share_percent = Number(editCourseForm.university_share_percent);
-        }
+        payload.university_share_percent = editCourseForm.university_share_percent === '' ? null : Number(editCourseForm.university_share_percent);
       }
 
       await aggregator.updateCourse(editingCourse.id, payload);
+
+      // Handle Course Fee update/creation
+      const existingCourseFee = editingCourse.fees?.find(f => f.fee_type === 'course_fee' && f.is_active);
+      if (existingCourseFee) {
+        if (existingCourseFee.amount.toString() !== editCourseForm.course_fee) {
+          await aggregator.updateFee(existingCourseFee.id, { amount: editCourseForm.course_fee });
+        }
+      } else {
+        await aggregator.createFee({
+          course: editingCourse.id,
+          fee_type: 'course_fee',
+          amount: editCourseForm.course_fee,
+          currency: 'INR',
+          is_active: true,
+        });
+      }
+
+      // Handle Registration Fee update/creation/deletion
+      const existingRegFee = editingCourse.fees?.find(f => f.fee_type === 'registration_fee' && f.is_active);
+      if (editCourseForm.registration_fee) {
+        if (existingRegFee) {
+          if (existingRegFee.amount.toString() !== editCourseForm.registration_fee) {
+            await aggregator.updateFee(existingRegFee.id, { amount: editCourseForm.registration_fee });
+          }
+        } else {
+          await aggregator.createFee({
+            course: editingCourse.id,
+            fee_type: 'registration_fee',
+            amount: editCourseForm.registration_fee,
+            currency: 'INR',
+            is_active: true,
+          });
+        }
+      } else if (existingRegFee) {
+        await aggregator.deleteFee(existingRegFee.id);
+      }
+
       setEditingCourse(null);
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update course');
+      setCourseError(getFriendlyErrorMessage(err, 'Failed to update course'));
     } finally {
       setSubmittingEditCourse(false);
     }
@@ -599,6 +754,11 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
           <div className="bg-card border border-border w-full max-w-sm rounded-lg shadow-lg p-6 space-y-4">
             <h3 className="text-base font-bold text-foreground">Add Course to {detail.name}</h3>
             <form onSubmit={handleCreateCourse} className="space-y-3">
+              {courseError && (
+                <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-md">
+                  {courseError}
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1">Course Name *</label>
                 <input
@@ -649,7 +809,7 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">University Share % Override *</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">University Share % Override</label>
                 <input
                   type="number"
                   step="0.01"
@@ -657,15 +817,42 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                   max="100"
                   value={courseForm.university_share_percent}
                   onChange={e => setCourseForm(prev => ({ ...prev, university_share_percent: e.target.value }))}
-                  required
-                  placeholder="E.g., 75.00"
+                  placeholder="Leave blank to inherit university default"
                   className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
                 />
+              </div>
+              <div className="border-t border-border pt-3 mt-3">
+                <h4 className="text-xs font-bold text-foreground mb-2">Fee Configuration</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Course Fee (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={courseForm.course_fee}
+                      onChange={e => setCourseForm(prev => ({ ...prev, course_fee: e.target.value }))}
+                      placeholder="E.g., 50000"
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Registration Fee (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={courseForm.registration_fee}
+                      onChange={e => setCourseForm(prev => ({ ...prev, registration_fee: e.target.value }))}
+                      placeholder="E.g., 2000"
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                    />
+                  </div>
+                </div>
               </div>
               <div className="flex gap-2 pt-2 justify-end">
                 <button
                   type="button"
-                  onClick={() => setShowAddCourse(false)}
+                  onClick={() => { setCourseError(null); setShowAddCourse(false); }}
                   className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted"
                 >
                   Cancel
@@ -689,6 +876,11 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
           <div className="bg-card border border-border w-full max-w-sm rounded-lg shadow-lg p-6 space-y-4">
             <h3 className="text-base font-bold text-foreground">Edit Course</h3>
             <form onSubmit={handleUpdateCourse} className="space-y-3">
+              {courseError && (
+                <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-md">
+                  {courseError}
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1">Course Name *</label>
                 <input
@@ -754,6 +946,34 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                   className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
                 />
               </div>
+              <div className="border-t border-border pt-3 mt-3">
+                <h4 className="text-xs font-bold text-foreground mb-2">Fee Configuration</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Course Fee (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={editCourseForm.course_fee}
+                      onChange={e => setEditCourseForm(prev => ({ ...prev, course_fee: e.target.value }))}
+                      placeholder="E.g., 50000"
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Registration Fee (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editCourseForm.registration_fee}
+                      onChange={e => setEditCourseForm(prev => ({ ...prev, registration_fee: e.target.value }))}
+                      placeholder="E.g., 2000"
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
               {editCourseForm.stream === 'Other' && (
                 <p className="text-xs text-destructive font-medium mt-1">
                   * Stream "Other" must be reclassified to enable updating.
@@ -762,7 +982,7 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
               <div className="flex gap-2 pt-2 justify-end">
                 <button
                   type="button"
-                  onClick={() => setEditingCourse(null)}
+                  onClick={() => { setCourseError(null); setEditingCourse(null); }}
                   className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted"
                 >
                   Cancel
@@ -840,7 +1060,7 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
         <h2 className="text-lg font-semibold">Courses ({detail.courses?.length ?? 0})</h2>
         {canCreate && (
           <button
-            onClick={() => setShowAddCourse(true)}
+            onClick={() => { setCourseError(null); setShowAddCourse(true); }}
             className="text-xs bg-primary text-primary-foreground rounded-md px-3 py-1.5 font-medium hover:bg-primary/90"
           >
             + Add Course
@@ -966,6 +1186,9 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                       {canUpdate && (
                         <button
                           onClick={() => {
+                            const courseFeeVal = c.fees?.find(f => f.fee_type === 'course_fee' && f.is_active)?.amount?.toString() || '';
+                            const regFeeVal = c.fees?.find(f => f.fee_type === 'registration_fee' && f.is_active)?.amount?.toString() || '';
+                            setCourseError(null);
                             setEditingCourse(c);
                             setEditCourseForm({
                               name: c.name,
@@ -973,6 +1196,8 @@ function UniversityDetail({ university, profile, onBack }: { university: Univers
                               duration_months: c.duration_months,
                               eligibility_text: c.eligibility_text || '',
                               university_share_percent: c.university_share_percent !== null && c.university_share_percent !== undefined ? c.university_share_percent.toString() : '',
+                              course_fee: courseFeeVal,
+                              registration_fee: regFeeVal,
                             });
                           }}
                           className="text-[11px] text-primary hover:underline font-semibold ml-2"
