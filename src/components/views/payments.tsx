@@ -100,6 +100,27 @@ export function PaymentsView({ profile }: { profile: UserProfile }) {
               <dt className="text-xs text-muted-foreground">Sub-center</dt>
               <dd className="font-medium text-foreground">{selectedPayment.sub_center_code}</dd>
             </div>
+            {selectedPayment.remarks !== undefined && (
+              <div className="col-span-2">
+                <dt className="text-xs text-muted-foreground">Remarks</dt>
+                <dd className="font-medium text-foreground">{selectedPayment.remarks || <span className="text-muted-foreground italic">No remarks provided</span>}</dd>
+              </div>
+            )}
+            {selectedPayment.screenshot_uri && (
+              <div className="col-span-2">
+                <dt className="text-xs text-muted-foreground mb-1">Payment Proof</dt>
+                <dd>
+                  <a
+                    href={selectedPayment.screenshot_uri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
+                  >
+                    View Screenshot ↗
+                  </a>
+                </dd>
+              </div>
+            )}
           </dl>
           
           <div className="bg-muted/30 border border-border rounded-lg p-4 flex justify-between items-center mb-6">
