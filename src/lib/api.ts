@@ -572,10 +572,10 @@ export const admissions = {
     apiFetch<Array<{ action_type: string; created_at: string; old_data: Record<string, unknown>; new_data: Record<string, unknown> }>>(`/enrollments/${id}/timeline`),
   getEnrollmentTimeline: (id: string) =>
     apiFetch<{ timeline: Array<{ action: string; timestamp: string; user_name?: string; old_data?: Record<string, any>; new_data?: Record<string, any>; notes?: string }> }>(`/enrollments/${id}/timeline`),
-  getRepaymentInfo: (id: string) =>
-    apiFetch<{ course_total_fee: string; registration_fee: string; repayment_amount: string }>(`/enrollments/${id}/repayment`),
-  initiateRepaymentCheckout: (id: string) =>
-    apiFetch<{ invoice_id: string; gateway_redirect_url: string }>(`/enrollments/${id}/repayment_checkout`, { method: 'POST' }),
+  getAddPaymentInfo: (id: string) =>
+    apiFetch<{ course_total_fee: string; registration_fee: string; repayment_amount: string }>(`/enrollments/${id}/add_payment_info`),
+  addPayment: (id: string, formData: FormData) =>
+    apiUpload<{ message: string; ledger_id: string }>(`/enrollments/${id}/add_payment`, formData),
 
   // Lead Conversion
   convertLead: (leadId: string) =>
@@ -635,8 +635,8 @@ export const finance = {
         sub_center_commission_percent: string;
       }>;
     }>('/checkout/batch/', { method: 'POST', body: JSON.stringify({ student_ids: studentIds }) }),
-  mockPayment: (enrollmentId: string, amount: string) =>
-    apiFetch<{ message: string; ledger_id: string }>('/payments/mock_payment', { method: 'POST', body: JSON.stringify({ enrollment_id: enrollmentId, amount }) }),
+  mockPayment: (formData: FormData) =>
+    apiUpload<{ message: string; ledger_id: string }>('/payments/mock_payment', formData),
 };
 
 // ──────────────── Support & Ticketing ────────────────

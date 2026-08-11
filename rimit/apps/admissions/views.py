@@ -274,16 +274,16 @@ class EnrollmentViewSet(AuditLogMixin, TenantAwareViewMixin, viewsets.ModelViewS
 
         return Response(EnrollmentSerializer(enrollment).data)
 
-    @action(detail=True, methods=['get'], url_path='repayment')
-    def repayment(self, request, pk=None):
-        """Retrieve repayment information for a generated enrollment."""
+    @action(detail=True, methods=['get'], url_path='add_payment_info')
+    def add_payment_info(self, request, pk=None):
+        """Retrieve payment information for a generated enrollment."""
         from decimal import Decimal
         from apps.aggregator.models import FeeStructure
 
         enrollment = self.get_object()
         if enrollment.status != Enrollment.STATUS_ENROLLMENT_GENERATED:
             return Response(
-                {"detail": "Repayment is only available after enrollment has been generated."},
+                {"detail": "Add Payment is only available after enrollment has been generated."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -302,75 +302,62 @@ class EnrollmentViewSet(AuditLogMixin, TenantAwareViewMixin, viewsets.ModelViewS
             "repayment_amount": str(repayment_amount)
         })
 
-    @action(detail=True, methods=['post'], url_path='repayment_checkout')
-    def repayment_checkout(self, request, pk=None):
-        """Initiate a repayment checkout for a generated enrollment."""
-        from decimal import Decimal
-        from django.db import transaction
+    @action(detail=True, methods=['post'], url_path='add_payment')
+    def add_payment(self, request, pk=None):
+        """Manually record a payment made outside the application."""
+        from decimal import Decimal, InvalidOperation
         import uuid
-        from apps.aggregator.models import FeeStructure
-        from apps.finance.models import Invoice, InvoiceLineItem
-        from apps.finance.net_remittance import calculate_net_remittance
+        from apps.finance.models import PaymentLedger
+        from apps.common.utils_storage import handle_file_upload
 
         enrollment = self.get_object()
         if enrollment.status != Enrollment.STATUS_ENROLLMENT_GENERATED:
             return Response(
-                {"detail": "Repayment is only available after enrollment has been generated."},
+                {"detail": "Add Payment is only available after enrollment has been generated."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        course = enrollment.course
-        active_fees = course.fees.filter(is_active=True)
-        course_total_fee = sum(f.amount for f in active_fees)
+        amount_str = request.data.get('amount')
+        if not amount_str:
+            return Response({"amount": ["Amount is required."]}, status=status.HTTP_400_BAD_REQUEST)
 
-        reg_fee_obj = active_fees.filter(fee_type=FeeStructure.FEE_REGISTRATION).first()
-        registration_fee = reg_fee_obj.amount if reg_fee_obj else Decimal('0.00')
+        try:
+            amount = Decimal(str(amount_str))
+        except (ValueError, InvalidOperation):
+            return Response({"amount": ["Amount must be a valid number."]}, status=status.HTTP_400_BAD_REQUEST)
 
-        repayment_amount = max(Decimal('0.00'), course_total_fee - registration_fee)
-        if repayment_amount <= 0:
-            return Response({"detail": "Repayment amount must be positive."}, status=status.HTTP_400_BAD_REQUEST)
+        # Normalize precision to 2 decimal places max
+        amount = amount.quantize(Decimal('0.01'))
 
-        uni_pct = course.university_share_percent if course.university_share_percent is not None else course.university.default_university_share_percent
-        if uni_pct is None or uni_pct == 0:
-            return Response(
-                {"detail": "Unable to determine the University Share %. Please configure either the University's Default University Share % or the Course University Share % Override before continuing."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        if amount <= 0:
+            return Response({"amount": ["Amount must be greater than 0."]}, status=status.HTTP_400_BAD_REQUEST)
 
-        from apps.finance.models import SubCenterCommission
-        sc_comm = SubCenterCommission.objects.filter(sub_center=enrollment.sub_center, course=course).first()
-        sc_comm_pct = sc_comm.commission_percent if sc_comm else Decimal('0.00')
+        remarks = request.data.get('remarks', '')
 
-        breakdown = calculate_net_remittance(
-            total_fee=repayment_amount,
-            university_share_percent=uni_pct,
-            sub_center_commission_percent=sc_comm_pct,
+        # File upload handling (mandatory)
+        file_obj = request.FILES.get('screenshot') or request.FILES.get('file')
+        if not file_obj:
+            return Response({"screenshot": ["Payment screenshot is required."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        screenshot_uri = handle_file_upload(
+            file_obj,
+            directory=f"payments/{enrollment.id}/",
+            filename_prefix="screenshot_"
         )
 
-        with transaction.atomic():
-            invoice = Invoice.objects.create(
-                sub_center=enrollment.sub_center,
-                gross_amount=repayment_amount,
-                sub_center_commission_deducted=breakdown.sub_center_commission,
-                net_payable_collected=breakdown.net_payable
-            )
-            InvoiceLineItem.objects.create(
-                invoice=invoice,
-                student=enrollment.student,
-                course=course,
-                enrollment=enrollment,
-                course_fee=repayment_amount,
-                university_share_percent=breakdown.university_share_percent,
-                university_share=breakdown.university_share,
-                gross_pool=breakdown.gross_pool,
-                sub_center_commission_percent=breakdown.sub_center_commission_percent,
-                sub_center_commission=breakdown.sub_center_commission,
-                rimit_commission=breakdown.rimit_commission,
-                net_payable=breakdown.net_payable,
-            )
-            gateway_token = uuid.uuid4().hex
+        # Create captured PaymentLedger record
+        ledger = PaymentLedger.objects.create(
+            enrollment=enrollment,
+            sub_center=enrollment.sub_center,
+            amount_paid=amount,
+            gateway='manual_upload',
+            transaction_ref=f"pay_mock_{uuid.uuid4().hex[:10]}",
+            status=PaymentLedger.STATUS_CAPTURED,
+            remarks=remarks,
+            screenshot_uri=screenshot_uri
+        )
 
         return Response({
-            "invoice_id": str(invoice.id),
-            "gateway_redirect_url": f"https://mock-pg.com/checkout/{gateway_token}?invoice={invoice.id}"
-        })
+            "message": "Payment recorded successfully",
+            "ledger_id": str(ledger.id)
+        }, status=status.HTTP_201_CREATED)

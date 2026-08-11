@@ -42,6 +42,8 @@ class PaymentLedger(TenantOwnedModel):
     gateway = models.CharField(max_length=50, default='razorpay')
     gateway_response = models.JSONField(default=dict, blank=True)
     receipt_uri = models.URLField(blank=True, help_text='MinIO URI of generated receipt PDF')
+    remarks = models.TextField(blank=True)
+    screenshot_uri = models.URLField(blank=True, help_text='MinIO/S3 URI of the uploaded payment screenshot')
 
     class Meta:
         db_table = 'payment_ledgers'

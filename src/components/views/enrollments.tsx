@@ -1,13 +1,35 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { admissions, aggregator, rules, finance, DEFAULT_PAGE_SIZE, type Enrollment, type UserProfile } from '@/lib/api';
+import { admissions, aggregator, rules, finance, DEFAULT_PAGE_SIZE, type Enrollment, type UserProfile, type Course, type FeeStructure, type PaymentLedger } from '@/lib/api';
 import { PageHeader, LoadingState, ErrorState, EmptyState, StatusBadge } from '../rimit-shell';
 import { usePermissions } from '@/lib/permissions';
 import { exportToCSV } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../rimit-shell';
 import { Combobox } from '@/components/ui/combobox';
+
+function parseApiError(err: unknown, defaultMsg: string = 'Operation failed'): string {
+  if (err instanceof Error) {
+    try {
+      const parsed = JSON.parse(err.message);
+      if (typeof parsed === 'object' && parsed !== null) {
+        for (const key of Object.keys(parsed)) {
+          const val = parsed[key];
+          if (Array.isArray(val) && val.length > 0) {
+            return `${key}: ${val[0]}`;
+          } else if (typeof val === 'string') {
+            return val;
+          }
+        }
+      }
+      return err.message;
+    } catch {
+      return err.message;
+    }
+  }
+  return defaultMsg;
+}
 
 export function EnrollmentsView({ profile }: { profile: UserProfile }) {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -298,15 +320,48 @@ function EnrollmentDetail({
   const [transitioning, setTransitioning] = useState(false);
   const [showMockPayment, setShowMockPayment] = useState(false);
   const [mockAmount, setMockAmount] = useState("30000");
+  const [mockRemarks, setMockRemarks] = useState("");
+  const [mockScreenshot, setMockScreenshot] = useState<File | null>(null);
+  const [mockScreenshotError, setMockScreenshotError] = useState<string | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cancelDialog, setCancelDialog] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<string | null>(null);
-  const [showRepaymentModal, setShowRepaymentModal] = useState(false);
-  const [repaymentInfo, setRepaymentInfo] = useState<{ course_total_fee: string; registration_fee: string; repayment_amount: string } | null>(null);
-  const [repaymentLoading, setRepaymentLoading] = useState(false);
-  const [repaymentCheckoutLoading, setRepaymentCheckoutLoading] = useState(false);
-  const [repaymentError, setRepaymentError] = useState<string | null>(null);
+  const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
+  const [addPaymentInfo, setAddPaymentInfo] = useState<{ course_total_fee: string; registration_fee: string; repayment_amount: string } | null>(null);
+  const [addPaymentLoading, setAddPaymentLoading] = useState(false);
+  const [addPaymentSubmitting, setAddPaymentSubmitting] = useState(false);
+  const [addPaymentError, setAddPaymentError] = useState<string | null>(null);
+
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentRemarks, setPaymentRemarks] = useState("");
+  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
+  const [paymentScreenshotError, setPaymentScreenshotError] = useState<string | null>(null);
+
+  const [fees, setFees] = useState<FeeStructure[]>([]);
+  const [payments, setPayments] = useState<PaymentLedger[]>([]);
+  const [courseObj, setCourseObj] = useState<Course | null>(null);
+
+  const loadFinancials = async () => {
+    try {
+      const cRes = await aggregator.getCourse(detail.course);
+      setCourseObj(cRes);
+    } catch {
+      // ignore
+    }
+    try {
+      const feesRes = await aggregator.listFees(detail.course);
+      setFees((feesRes.results || []).filter(f => f.is_active));
+    } catch {
+      // ignore
+    }
+    try {
+      const paymentsRes = await finance.listPayments({ enrollment: detail.id, ordering: '-created_at' });
+      setPayments(paymentsRes.results || []);
+    } catch {
+      // ignore
+    }
+  };
 
   // Statuses restricted to super_admin only
   const SUPER_ADMIN_ONLY_STATUSES = ['Fee Paid', 'Enrolled', 'Enrollment Generated'];
@@ -321,52 +376,116 @@ function EnrollmentDetail({
     }
   };
 
-  const loadRepaymentInfo = async () => {
-    setRepaymentLoading(true);
-    setRepaymentError(null);
+  const loadAddPaymentInfo = async () => {
+    setAddPaymentLoading(true);
+    setAddPaymentError(null);
+    setPaymentScreenshotError(null);
     try {
-      const info = await admissions.getRepaymentInfo(detail.id);
-      setRepaymentInfo(info);
+      const info = await admissions.getAddPaymentInfo(detail.id);
+      setAddPaymentInfo(info);
+      setPaymentAmount(info.repayment_amount);
     } catch (err) {
-      setRepaymentError(err instanceof Error ? err.message : "Failed to load repayment information.");
+      setAddPaymentError(parseApiError(err, "Failed to load payment details."));
     } finally {
-      setRepaymentLoading(false);
+      setAddPaymentLoading(false);
     }
   };
 
-  const handleRepaymentCheckout = async () => {
-    setRepaymentCheckoutLoading(true);
-    setRepaymentError(null);
+  const handleAddPayment = async () => {
+    if (!paymentAmount || Number(paymentAmount) <= 0) {
+      setAddPaymentError("Amount is required and must be greater than 0.");
+      return;
+    }
+    if (!paymentScreenshot) {
+      setPaymentScreenshotError("Payment screenshot is required.");
+      return;
+    }
+    setAddPaymentSubmitting(true);
+    setAddPaymentError(null);
+    setPaymentScreenshotError(null);
+
+    let mutationSuccess = false;
     try {
-      const res = await admissions.initiateRepaymentCheckout(detail.id);
-      if (res.gateway_redirect_url) {
-        window.location.href = res.gateway_redirect_url;
+      const formData = new FormData();
+      formData.append('amount', paymentAmount);
+      formData.append('remarks', paymentRemarks);
+      formData.append('screenshot', paymentScreenshot);
+      await admissions.addPayment(detail.id, formData);
+      mutationSuccess = true;
+      toast.success("Payment added successfully.");
+      setShowAddPaymentModal(false);
+      setPaymentRemarks("");
+      setPaymentScreenshot(null);
+      setPaymentScreenshotError(null);
+    } catch (err) {
+      const parsedError = parseApiError(err, "Failed to add payment.");
+      setAddPaymentError(parsedError);
+    } finally {
+      setAddPaymentSubmitting(false);
+    }
+
+    if (mutationSuccess) {
+      try {
+        loadTimeline();
+        loadFinancials();
+        const updated = await admissions.getEnrollment(detail.id);
+        setDetail(updated);
+      } catch (err) {
+        toast.warning("Payment was recorded successfully, but the latest enrollment data could not be refreshed. Please refresh the page.");
       }
-    } catch (err) {
-      setRepaymentError(err instanceof Error ? err.message : "Repayment checkout failed.");
-    } finally {
-      setRepaymentCheckoutLoading(false);
     }
   };
 
-  useEffect(() => { loadTimeline(); }, []); // eslint-disable-line
+  useEffect(() => {
+    loadTimeline();
+    loadFinancials();
+  }, []); // eslint-disable-line
 
   const handleMockPayment = async () => {
     if (!detail) return;
+    if (!mockAmount || Number(mockAmount) <= 0) {
+      setError("Amount is required and must be greater than 0.");
+      return;
+    }
+    if (!mockScreenshot) {
+      setMockScreenshotError("Payment screenshot is required.");
+      return;
+    }
     setPaymentLoading(true);
     setError(null);
+    setMockScreenshotError(null);
+
+    let mutationSuccess = false;
     try {
-      await finance.mockPayment(detail.id, mockAmount);
+      const formData = new FormData();
+      formData.append('enrollment_id', detail.id);
+      formData.append('amount', mockAmount);
+      formData.append('remarks', mockRemarks);
+      formData.append('screenshot', mockScreenshot);
+
+      await finance.mockPayment(formData);
+      mutationSuccess = true;
       toast.success(`Simulated payment of ₹${mockAmount} successful!`);
       setShowMockPayment(false);
-      loadTimeline();
-      const updated = await admissions.getEnrollment(detail.id);
-      setDetail(updated);
+      setMockRemarks("");
+      setMockScreenshot(null);
+      setMockScreenshotError(null);
     } catch (err) {
       toast.error("Mock payment failed");
-      setError(err instanceof Error ? err.message : "Mock payment failed");
+      setError(parseApiError(err, "Mock payment failed"));
     } finally {
       setPaymentLoading(false);
+    }
+
+    if (mutationSuccess) {
+      try {
+        loadTimeline();
+        loadFinancials();
+        const updated = await admissions.getEnrollment(detail.id);
+        setDetail(updated);
+      } catch (err) {
+        toast.warning("Payment was recorded successfully, but the latest enrollment data could not be refreshed. Please refresh the page.");
+      }
     }
   };
 
@@ -502,13 +621,125 @@ function EnrollmentDetail({
             )}
           </div>
 
+          {/* Fee Details Card */}
+          {(() => {
+            const totalFee = fees.length > 0
+              ? fees.reduce((sum, f) => sum + parseFloat(f.amount || '0'), 0)
+              : (courseObj?.total_fee ? parseFloat(String(courseObj.total_fee)) : 0);
+            const totalPaid = payments
+              .filter(p => p.status === 'captured')
+              .reduce((sum, p) => sum + parseFloat(p.amount_paid || '0'), 0);
+            const balanceFee = Math.max(0, totalFee - totalPaid);
+
+            return (
+              <div className="bg-card border border-border rounded-lg p-5">
+                <h3 className="text-sm font-semibold mb-3 text-foreground border-b border-border pb-2">Fee Details</h3>
+                <div className="space-y-2">
+                  {fees.length === 0 ? (
+                    courseObj?.total_fee ? (
+                      <div className="space-y-2">
+                        <div className="flex justify-between py-1 text-sm">
+                          <span className="text-muted-foreground">Course Fee</span>
+                          <span className="font-semibold text-foreground">₹{parseFloat(String(courseObj.total_fee)).toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground py-2">
+                        No active fee items configured for this course.
+                      </div>
+                    )
+                  ) : (
+                    <div className="space-y-2">
+                      {fees.map(fee => (
+                        <div key={fee.id} className="flex justify-between py-1 text-sm">
+                          <span className="text-muted-foreground capitalize">{fee.fee_type.replace(/_/g, ' ')}</span>
+                          <span className="font-semibold text-foreground">₹{parseFloat(fee.amount).toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="border-t border-border pt-3 mt-3 space-y-2">
+                    <div className="flex justify-between text-sm font-semibold text-foreground">
+                      <span>Total Fee</span>
+                      <span>₹{totalFee.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-semibold text-emerald-600">
+                      <span>Amount Paid</span>
+                      <span>₹{totalPaid.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-bold text-primary border-t border-border pt-2">
+                      <span>Balance Amount</span>
+                      <span>₹{balanceFee.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Payment History Card */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold mb-3 text-foreground border-b border-border pb-2">Payment History</h3>
+            <div className="overflow-x-auto">
+              {payments.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-2">
+                  No payments recorded yet.
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/30 border-b border-border">
+                    <tr>
+                      <th className="text-left px-4 py-2 font-medium text-muted-foreground">Transaction Ref</th>
+                      <th className="text-left px-4 py-2 font-medium text-muted-foreground">Amount</th>
+                      <th className="text-left px-4 py-2 font-medium text-muted-foreground">Status</th>
+                      <th className="text-left px-4 py-2 font-medium text-muted-foreground">Date & Time</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {payments.map(p => (
+                      <tr key={p.id} className="hover:bg-muted/20">
+                        <td className="px-4 py-2 font-medium text-foreground">
+                          <span className="block font-mono text-xs">{p.transaction_ref}</span>
+                          {p.remarks && (
+                            <span className="block text-[10px] text-muted-foreground font-normal mt-0.5">
+                              Remarks: {p.remarks}
+                            </span>
+                          )}
+                          {p.screenshot_uri && (
+                            <a
+                              href={p.screenshot_uri}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] text-primary hover:underline block mt-0.5 font-normal"
+                            >
+                              View Screenshot
+                            </a>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 font-semibold text-foreground">
+                          ₹{parseFloat(p.amount_paid).toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-4 py-2">
+                          <StatusBadge status={p.status} />
+                        </td>
+                        <td className="px-4 py-2 text-muted-foreground text-xs">
+                          {new Date(p.created_at).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
           {error && <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 text-sm text-destructive">{error}</div>}
         </div>
 
         <div className="space-y-4">
           <div className="bg-card border border-border rounded-lg p-5">
             <h3 className="text-sm font-semibold mb-3 text-foreground border-b border-border pb-2">Status Workflow</h3>
-            {detail.status === 'Fee Pending' && (
+            {canUpdate && ['super_admin', 'academic_head', 'counselor'].includes(profile.role) && detail.status === 'Fee Pending' && (
               <div className="mb-4">
                 <button
                   onClick={() => setShowMockPayment(true)}
@@ -518,16 +749,16 @@ function EnrollmentDetail({
                 </button>
               </div>
             )}
-            {detail.status === 'Enrollment Generated' && (
+            {canUpdate && detail.status === 'Enrollment Generated' && (
               <div className="mb-4">
                 <button
                   onClick={() => {
-                    setShowRepaymentModal(true);
-                    loadRepaymentInfo();
+                    setShowAddPaymentModal(true);
+                    loadAddPaymentInfo();
                   }}
                   className="w-full bg-primary text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/95 transition"
                 >
-                  Re-payment
+                  Add Payment
                 </button>
               </div>
             )}
@@ -626,28 +857,71 @@ function EnrollmentDetail({
 
       {showMockPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-background border border-border p-6 rounded-lg shadow-lg max-w-sm w-full">
+          <div className="bg-background border border-border p-6 rounded-lg shadow-lg max-w-md w-full">
             <h3 className="text-lg font-bold mb-4">Simulate Payment (Mock)</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Enter the amount to mock a successful payment capture via Razorpay.
-            </p>
-            <input
-              type="number"
-              value={mockAmount}
-              onChange={(e) => setMockAmount(e.target.value)}
-              className="w-full border border-border bg-background text-foreground p-2 rounded-md mb-4"
-              placeholder="Amount (e.g. 30000)"
-            />
-            <div className="flex justify-end gap-2">
+
+            {error && <p className="text-sm text-destructive mb-4">{error}</p>}
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Amount Paid (₹) *</label>
+                <input
+                  type="number"
+                  value={mockAmount}
+                  onChange={(e) => setMockAmount(e.target.value)}
+                  className="w-full border border-border bg-background text-foreground p-2 rounded-md"
+                  placeholder="e.g. 30000"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Remarks</label>
+                <textarea
+                  value={mockRemarks}
+                  onChange={(e) => setMockRemarks(e.target.value)}
+                  className="w-full border border-border bg-background text-foreground p-2 rounded-md h-20 resize-none text-sm"
+                  placeholder="Example: Second Semester Fee, Fine Payment, Hostel Fee, Examination Fee"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Payment Screenshot *</label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      setMockScreenshot(e.target.files[0]);
+                      setMockScreenshotError(null);
+                    } else {
+                      setMockScreenshot(null);
+                    }
+                  }}
+                  className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                />
+                {mockScreenshotError && (
+                  <p className="text-xs text-destructive font-medium mt-1">{mockScreenshotError}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
               <button
-                onClick={() => setShowMockPayment(false)}
+                onClick={() => {
+                  setShowMockPayment(false);
+                  setMockRemarks("");
+                  setMockScreenshot(null);
+                  setMockScreenshotError(null);
+                  setError(null);
+                }}
+                disabled={paymentLoading}
                 className="px-4 py-2 text-sm font-medium border border-border hover:bg-muted rounded-md"
               >
                 Cancel
               </button>
               <button
                 onClick={handleMockPayment}
-                disabled={paymentLoading || !mockAmount}
+                disabled={paymentLoading}
                 className="px-4 py-2 text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 rounded-md disabled:opacity-50"
               >
                 {paymentLoading ? 'Processing...' : 'Simulate Payment'}
@@ -669,50 +943,97 @@ function EnrollmentDetail({
         />
       )}
 
-      {showRepaymentModal && (
+      {showAddPaymentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-background border border-border p-6 rounded-lg shadow-lg max-w-sm w-full">
-            <h3 className="text-lg font-bold mb-4">Re-payment Details</h3>
+          <div className="bg-background border border-border p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-bold mb-4">Add Payment</h3>
 
-            {repaymentLoading && <p className="text-sm text-muted-foreground">Loading repayment details...</p>}
+            {addPaymentLoading && <p className="text-sm text-muted-foreground">Loading payment details...</p>}
 
-            {repaymentError && <p className="text-sm text-destructive mb-4">{repaymentError}</p>}
+            {addPaymentError && <p className="text-sm text-destructive mb-4">{addPaymentError}</p>}
 
-            {!repaymentLoading && repaymentInfo && (
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Course Total Fee:</span>
-                  <span className="font-semibold text-foreground">₹{parseFloat(repaymentInfo.course_total_fee).toLocaleString('en-IN')}</span>
+            {!addPaymentLoading && addPaymentInfo && (
+              <div className="space-y-4">
+                <div className="bg-muted/50 p-3 rounded-md space-y-2 text-sm mb-4 border border-border">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Course Total Fee:</span>
+                    <span className="font-semibold text-foreground">₹{parseFloat(addPaymentInfo.course_total_fee).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Registration Fee Paid:</span>
+                    <span className="font-semibold text-foreground">₹{parseFloat(addPaymentInfo.registration_fee).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="border-t border-border pt-2 flex justify-between font-bold">
+                    <span className="text-foreground">Total Pending Amount:</span>
+                    <span className="text-primary">₹{parseFloat(addPaymentInfo.repayment_amount).toLocaleString('en-IN')}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Registration Fee:</span>
-                  <span className="font-semibold text-foreground">₹{parseFloat(repaymentInfo.registration_fee).toLocaleString('en-IN')}</span>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">Amount Paid (₹) *</label>
+                  <input
+                    type="number"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    className="w-full border border-border bg-background text-foreground p-2 rounded-md"
+                    placeholder="e.g. 30000"
+                  />
                 </div>
-                <div className="border-t border-border pt-3 flex justify-between text-sm font-bold">
-                  <span className="text-foreground">Re-payment Amount:</span>
-                  <span className="text-primary">₹{parseFloat(repaymentInfo.repayment_amount).toLocaleString('en-IN')}</span>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">Remarks</label>
+                  <textarea
+                    value={paymentRemarks}
+                    onChange={(e) => setPaymentRemarks(e.target.value)}
+                    className="w-full border border-border bg-background text-foreground p-2 rounded-md h-20 resize-none text-sm"
+                    placeholder="Example: Second Semester Fee, Fine Payment, Hostel Fee, Examination Fee"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">Payment Screenshot *</label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        setPaymentScreenshot(e.target.files[0]);
+                        setPaymentScreenshotError(null);
+                      } else {
+                        setPaymentScreenshot(null);
+                      }
+                    }}
+                    className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  />
+                  {paymentScreenshotError && (
+                    <p className="text-xs text-destructive font-medium mt-1">{paymentScreenshotError}</p>
+                  )}
                 </div>
               </div>
             )}
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 mt-6">
               <button
                 onClick={() => {
-                  setShowRepaymentModal(false);
-                  setRepaymentInfo(null);
-                  setRepaymentError(null);
+                  setShowAddPaymentModal(false);
+                  setAddPaymentInfo(null);
+                  setAddPaymentError(null);
+                  setPaymentRemarks("");
+                  setPaymentScreenshot(null);
+                  setPaymentScreenshotError(null);
                 }}
+                disabled={addPaymentSubmitting}
                 className="px-4 py-2 text-sm font-medium border border-border hover:bg-muted rounded-md"
               >
-                Close
+                Cancel
               </button>
-              {!repaymentLoading && repaymentInfo && (
+              {!addPaymentLoading && addPaymentInfo && (
                 <button
-                  onClick={handleRepaymentCheckout}
-                  disabled={repaymentCheckoutLoading || parseFloat(repaymentInfo.repayment_amount) <= 0}
+                  onClick={handleAddPayment}
+                  disabled={addPaymentSubmitting}
                   className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/95 rounded-md disabled:opacity-50"
                 >
-                  {repaymentCheckoutLoading ? 'Processing...' : 'Pay'}
+                  {addPaymentSubmitting ? 'Submitting...' : 'Add Payment'}
                 </button>
               )}
             </div>
