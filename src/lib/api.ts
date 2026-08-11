@@ -391,6 +391,8 @@ export interface PaymentLedger {
   status: string;
   gateway: string;
   created_at: string;
+  remarks?: string;
+  screenshot_uri?: string;
 }
 
 export interface LeadIngestionLog {
